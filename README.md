@@ -1,9 +1,13 @@
 # assistant-agent
-KLTN 24K3
+KLTN 24K3N1 - Thử nghiệm Open AI Agent SDK
 
-### Install all requirements
-git install -r requirements.txt
+### Install all requirements - Required: Python 3.11.5 Stable
+cd assistant-agent
+pip install -r requirements.txt
 
-### Run LangGraph studio
-langgraph dev
+# Tìm Chatbot trên Telegram
+@assistant_tlu_bot
+
+### Run Chatbot via Telegram
+python app.py
 
