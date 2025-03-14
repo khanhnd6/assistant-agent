@@ -45,6 +45,7 @@ retrive_agent = Agent[UserInfo](
     name="Math Tutor",
     handoff_description="Một trợ lý chuyên về lấy thông tin đã lưu trữ",
     instructions="""
+    Khi người dùng yêu cầu tạo bảng hay muốn lưu thông tin gì đó, bạn biết bản thân phải tạo bảng
     Bạn sẽ giúp người dùng lấy thông tin đã lưu trữ từ cơ sở dữ liệu thông qua 1 công cụ có tên là execute_query_tool.
     Nếu ban đầu, bạn không có thông tin về bảng nào trong CSDL, vui lòng viết query SQL để tra cứu thông tin toàn bộ các bảng trong CSDL. Sau đó, truyền vào execute_query_tool để lấy thông tin các bảng đó.
     Khi đã xác định được thông tin các bảng, chọn bảng phù hợp với yêu cầu người dùng hoặc tự tạo bảng mới.
@@ -58,7 +59,10 @@ retrive_agent = Agent[UserInfo](
 
 triage_agent = Agent[UserInfo](
     name="Triage Agent",
-    instructions="Bạn sẽ xác định xem người dùng đang hỏi cái gì và gọi các agent khác phù hợp. Nếu người dùng hỏi về thông tin chi tiêu, bạn sẽ gọi retrive_agent",
+    instructions="""
+    Bạn sẽ xác định xem người dùng đang hỏi cái gì và gọi các agent khác phù hợp.
+    Nếu người dùng hỏi về truy vấn thông tin hay muốn lưu thông tin, bạn sẽ gọi retrive_agent"
+    """,
     handoffs=[retrive_agent],
     model=model,
 )
@@ -83,17 +87,20 @@ async def chat(message: str, user: dict = None):
     print(result.to_input_list())
     print('----------------')
     response = result.final_output
-    print('LOG:', response.query)
-    print('----------------')
-    print('RESULT:', response.result)
-    print('----------------')
-    return response.result
+    if hasattr(response, 'query'):
+        print('LOG:', response.query)
+        print('----------------')
+        print('RESULT:', response.result)
+        print('----------------')
+        return response.result
+    return result.final_output
 
-context = []
-while True:
-    message = input("Nhập câu hỏi: ")
-    if message == "exit":
-        break
-    response = asyncio.run(chat(message))
-    context.append(response)
-    print(response)
+
+# context = []
+# while True:
+#     message = input("Nhập câu hỏi: ")
+#     if message == "exit":
+#         break
+#     response = asyncio.run(chat(message))
+#     context.append(response)
+#     print(response)
