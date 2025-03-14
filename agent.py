@@ -30,12 +30,18 @@ model = 'gpt-4o-mini'
 class UserInfo:  
     id: str
 
+class Output(BaseModel):
+    query: str
+    result: str
+
 @function_tool
-async def execute_query_tool(query: str):
-    result = execute_query(query)
+async def execute_query_tool(wrapper: RunContextWrapper[UserInfo], query: str):
+    user_id = str(wrapper.context.id)
+    print(user_id)
+    result = execute_query(query, user_id)
     return result
 
-retrive_agent = Agent(
+retrive_agent = Agent[UserInfo](
     name="Math Tutor",
     handoff_description="Một trợ lý chuyên về lấy thông tin đã lưu trữ",
     instructions="""
@@ -47,29 +53,47 @@ retrive_agent = Agent(
     """,
     tools=[execute_query_tool],
     model=model,
+    output_type=Output
 )
 
-triage_agent = Agent(
+triage_agent = Agent[UserInfo](
     name="Triage Agent",
     instructions="Bạn sẽ xác định xem người dùng đang hỏi cái gì và gọi các agent khác phù hợp. Nếu người dùng hỏi về thông tin chi tiêu, bạn sẽ gọi retrive_agent",
     handoffs=[retrive_agent],
     model=model,
 )
 
+import asyncio
+
 async def chat(message: str, user: dict = None):
+    user_info = None
+    print(user)
+    if user is None:
+        user_info = UserInfo(id='standard')
+    else:
+        user_id = user.get('id', 'standard')  # Lấy id từ dict user
+        user_info = UserInfo(id=user_id)  # Đúng cú pháp
+
     result = await Runner.run(
         triage_agent, 
-        input=message,)
+        input=message,
+        context=user_info
+    )
+
     print(result.to_input_list())
     print('----------------')
-    return result.final_output
+    response = result.final_output
+    print('LOG:', response.query)
+    print('----------------')
+    print('RESULT:', response.result)
+    print('----------------')
+    return response.result
 
 context = []
 while True:
     message = input("Nhập câu hỏi: ")
     if message == "exit":
         break
-    full_message = "Hội thoại trước đó: " + "\n".join(context) + "\n" + "Câu hỏi hiện tại: " + message
-    response = asyncio.run(chat(full_message))
+    response = asyncio.run(chat(message))
     context.append(response)
     print(response)

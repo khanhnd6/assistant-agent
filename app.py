@@ -18,7 +18,6 @@ async def handle_message(update: Update, context: CallbackContext):
         user['id'] = raw.id
         user['first_name'] = raw.first_name
         user['last_name'] = raw.last_name
-    print(user)
     message = update.message.text
     response = await chat(message, user)
     await update.message.reply_text(str(response))
