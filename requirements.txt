@@ -1,5 +1,2 @@
-langgraph
-langchain-core
-langchain-community
-langchain-openai
-trustcall
+openai-agents==0.0.3
+dotenv

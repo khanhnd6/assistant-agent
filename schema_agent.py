@@ -134,33 +134,28 @@ update_schema_tool = FunctionTool(
 update_schema_agent = Agent[AssistantContext](
     name="update_schema_agent",
     model="gpt-4o-mini",
-    instructions="""You are helpful structured AI to update the schemas based on user request
-    First, refer to the target schema from the context (call retrieve_all_schemas_in_context if no schema data exists in the context). Apply all changes from the user to the target schema and present the current structure and the proposed new structure to the user for confirmation.    
-    
-    After user confirmation, do following:
-    Return a schema with:
-    - name: Unique, no spaces/special chars (e.g., 'todolist')
-    - display_name: Human-readable (e.g., 'Todo List')
-    - description: Purpose of the schema
-    - fields: List of {name, display_name, description, data_type} (no nested fields)
+    instructions="""You are a helpful structured AI to update schemas based on user requests. Follow these steps with high priority:
 
-    Example for a todo list request:
-    {
-        "name": "todolist",
-        "display_name": "Todo List",
-        "description": "Task management for user",
-        "fields": [
-            {"name": "task_name", "display_name": "Task Name", "description": "Task title", "data_type": "string"},
-            {"name": "due_date", "display_name": "Due Date", "description": "Task deadline", "data_type": "datetime"}
-        ]
-    }
-    
-    You have to follow:
-    1. Do NOT change the name of schema, cause it is used to identify the schema
-    2. For a single schema, apply all requested changes (e.g., updating description, adding fields) in one step, then serialize the updated schema to JSON and call update_schema_tool ONCE per schema.
-    3. If the request involves multiple schemas, call update_schema_tool in parallel, but only once per distinct schema.
-    4. Based on the tool’s response, craft a personalized reply and show the user the final structure (e.g., "Your Todo List schema is ready!").
-    """,
+1. Retrieve the target schema from the context (call `retrieve_all_schemas_in_context` if no schema data exists).
+2. Apply all requested changes from the user to the target schema.
+3. Present the current schema structure and the proposed new structure to the user in a clear format (e.g., "Here’s the current schema: ... Here’s the proposed schema: ... Do you confirm these changes?").
+4. WAIT for the user to confirm changes before proceeding. Do NOT call `update_schema_tool` until the user confirmation."
+   - If the user denined, ask for further instructions or adjustments.
+   - If the user doesn’t respond, do nothing until they do.
+
+After receiving user agreement:
+- Serialize the updated schema to JSON with:
+  - name: Unique, no spaces/special chars (e.g., 'todolist')
+  - display_name: Human-readable (e.g., 'Todo List')
+  - description: Purpose of the schema
+  - fields: List of {name, display_name, description, data_type} (no nested fields)
+- Call `update_schema_tool` ONCE per schema.
+- Based on the tool’s response, reply with the final structure (e.g., "Your Todo List schema is ready! Here’s the final structure: ...").
+
+Rules:
+1. Do NOT change the schema’s name—it identifies the schema.
+2. For a single schema, apply all changes in one step before calling `update_schema_tool`.
+3. For multiple schemas, call `update_schema_tool` in parallel, but only once per schema.""",
     tools=[update_schema_tool, retrieve_all_schemas_in_context],
     model_settings=ModelSettings(parallel_tool_calls=True)
 )
@@ -195,7 +190,7 @@ recommend_schema_agent = Agent[AssistantContext](
     name = "recommend_schema_agent",
     model="gpt-4o-mini",
     instructions=""" You are helpful assistant, you are responsible for recommending the most detailed schema fields in case of not existing schema in the context based on user input, just recommend fields you are possible to store and most important, notice that no nested field
-    Notice that you recommend the display names and their description for fields
+    Notice that you recommend the Human-readable fields
     After recommend fields, suggest that you can help them to create that schema in the memory
     """
 )
@@ -258,8 +253,8 @@ async def main():
                 print("Agent response: ", res.final_output)
                 
             except Exception as e:
-                print(f"Error: {e}")
-                break
+                print(f"Error happened, please come again: {e}")
+                # break
 
 if __name__ == "__main__":
     asyncio.run(main())
