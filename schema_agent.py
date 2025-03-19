@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from dataclasses import dataclass
 
+from utils.context_funcs import retrieve_all_schemas_in_context
 from models.context import AssistantContext
 from models.field import SchemaField
 from models.schema import Schema
@@ -15,40 +16,6 @@ from models.schema_state import SchemaState
 load_dotenv()
 
 openai_api_key = os.environ["OPENAI_API_KEY"]
-
-def simplify_schema_context(schema_state_list: List[SchemaState]) -> str:
-    schemas = [schemaState.schema for schemaState in schema_state_list]
-    schema_format = """
--   Schema: {schema_name}
-    Display Name: {schema_display_name}
-    Description: {schema_description}
-    Fields: {schema_fields}
-     """
-    field_format = """
-        -   Field: {field_name}
-            Display Name: {field_display_name}
-            Description: {field_description}
-            Data type: {data_type}
-    """
-     
-    if schemas:
-        output = ""
-        for schema in schemas:
-            fields_str=""
-            for field in schema.fields:
-                fields_str += field_format.format(field_name=field.name, field_display_name=field.display_name, field_description=field.description,data_type=field.data_type)
-            schema_info = schema_format.format(
-                schema_name=schema.name, 
-                schema_display_name=schema.display_name, 
-                schema_description=schema.description, 
-                schema_fields=fields_str)
-            output += schema_info + "\n"
-        return output
-    return "No existed schema data in your memory"
-
-@function_tool
-async def retrieve_all_schemas_in_context(wrapper: RunContextWrapper[AssistantContext]) -> str:
-    return simplify_schema_context(wrapper.context.schema_state_list)
 
 async def create_schema(wrapper: RunContextWrapper[AssistantContext], args: str) -> str:
     try:
@@ -106,10 +73,6 @@ create_schema_agent = Agent[AssistantContext](
 async def update_schema(wrapper: RunContextWrapper[AssistantContext], args: str) -> str:
     try:
         parsed = Schema.model_validate_json(args)
-
-        now = datetime.now(UTC)
-        
-        print(parsed)
         
         isUpdated = False
         
@@ -211,6 +174,8 @@ schema_agent = Agent[AssistantContext](
     5. Have to be confirm from user to do actions: create, delete
     6. Have to refer the context, use it to personalize the response.
     7. If user wants to recorver deleted schemas, you have to refer to chat history then notice that you can not recover that, you only can recreate them, waiting for user confirmation, and hand off them for create_schema_agent
+    8. DO NOT return records of schemas to user
+    
     """,
     handoffs=[create_schema_agent, update_schema_agent, delete_schema_agent, recommend_schema_agent],
     tools=[retrieve_all_schemas_in_context]
@@ -218,6 +183,56 @@ schema_agent = Agent[AssistantContext](
 
 async def main():
     input_items: list[TResponseInputItem] = []
+    mock_record_1 = RecordBase(
+        schema_name="todolist",
+        data={
+            "task_title": "Prepare presentation",
+            "description": "Create slides for quarterly review meeting",
+            "due_date": datetime(2025, 3, 20, 14, 0),  # March 20, 2025, 2:00 PM UTC
+            "priority": "high",
+            "status": "pending",
+            "created_date": datetime(2025, 3, 17, 9, 0),  # March 17, 2025, 9:00 AM UTC
+            "assigned_to": "alice.jones@example.com"
+        },
+        metadata={
+            "source": "work",
+            "tags": ["meeting", "presentation", "urgent"]
+        }
+    )
+
+    mock_record_2 = RecordBase(
+        schema_name="todolist",
+        data={
+            "task_title": "Schedule dentist appointment",
+            "description": "Book annual checkup for next month",
+            "due_date": datetime(2025, 3, 25, 12, 0),  # March 25, 2025, 12:00 PM UTC
+            "priority": "low",
+            "status": "pending",
+            "created_date": datetime(2025, 3, 18, 10, 30),  # March 18, 2025, 10:30 AM UTC
+            "assigned_to": "bob.smith@example.com"
+        },
+        metadata={
+            "source": "personal",
+            "tags": ["health", "appointment"]
+        }
+    )
+
+    mock_record_3 = RecordBase(
+        schema_name="todolist",
+        data={
+            "task_title": "Review code changes",
+            "description": "Check pull request #123 for new feature",
+            "due_date": datetime(2025, 3, 19, 17, 0),  # March 19, 2025, 5:00 PM UTC
+            "priority": "medium",
+            "status": "completed",
+            "created_date": datetime(2025, 3, 16, 13, 0),  # March 16, 2025, 1:00 PM UTC
+            "assigned_to": "charlie.dev@example.com"
+        },
+        metadata={
+            "source": "development",
+            "tags": ["coding", "review", "team"]
+        }
+    )
     with trace(" 2025-03-15 Schema agent"):
         schemas = [
             SchemaState(
@@ -235,7 +250,7 @@ async def main():
                         SchemaField(name='assigned_to', display_name='Assigned To', description='Person responsible for the task', data_type='string')
                         ]
                     ), 
-                records=[], 
+                records=[mock_record_1, mock_record_2, mock_record_3], 
                 created_at=datetime(2025, 3, 14))
             ]
         
