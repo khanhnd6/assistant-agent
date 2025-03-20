@@ -6,31 +6,66 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from datetime import datetime, UTC
 from dataclasses import dataclass
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 from utils.context_funcs import retrieve_all_schemas_in_context
-from models.context import AssistantContext
-from models.field import SchemaField
-from models.schema import Schema
-from models.record_base import RecordBase
-from models.schema_state import SchemaState
+from models.DTOs.context import AssistantContext
+from models.DTOs.field import SchemaFieldDto
+from models.DTOs.schema import SchemaDto
+from models.DTOs.record_base import RecordBaseDto
+from models.DTOs.schema_state import SchemaStateDto
+from utils.mongodb_handler import MongoDBHandler
+from models.DB.schema import Schema
 load_dotenv()
 
 openai_api_key = os.environ["OPENAI_API_KEY"]
+mongodb_conn = os.environ["MONGODB_CONN"]
+db_name = os.environ["MONGODB_DATABASE"]
 
 async def create_schema(wrapper: RunContextWrapper[AssistantContext], args: str) -> str:
     try:
-        parsed = Schema.model_validate_json(args)
+        parsed = SchemaDto.model_validate_json(args)
 
         now = datetime.now(UTC)
         
-        schema_state = SchemaState(schema=parsed, records=[],created_at=now)
+        user_id = wrapper.context.user_id
+        
+        schema_state = SchemaStateDto(schema=parsed, records=[])
         
         wrapper.context.schema_state_list.append(schema_state)
+        
+        db = MongoDBHandler(mongodb_conn, db_name)
+        
+        db_schema_value = {
+            "user_id": user_id,
+            "name": parsed.name,
+            "display_name": parsed.display_name,
+            "description": parsed.description,
+            "fields": [
+                {
+                    "name": field.name,
+                    "display_name": field.display_name,
+                    "description": field.description,
+                    "data_type": field.data_type,
+                    "created_at": now,
+                } for field in parsed.fields
+            ],
+            "created_at": now,
+        }
+        
+        inserted_id = db.insert_document("SCHEMAS", db_schema_value)
+        
+        db.close_connection()
+        
+        if inserted_id is None:
+            return "Save to database failed"
+        
         return "Save successfully"
     except Exception as e:
         return "Error happened"
 
-schema_json_schema = Schema.model_json_schema()
+schema_json_schema = SchemaDto.model_json_schema()
 schema_json_schema["additionalProperties"] = False
 
 create_schema_tool = FunctionTool(
@@ -72,18 +107,41 @@ create_schema_agent = Agent[AssistantContext](
 
 async def update_schema(wrapper: RunContextWrapper[AssistantContext], args: str) -> str:
     try:
-        parsed = Schema.model_validate_json(args)
+        parsed = SchemaDto.model_validate_json(args)
         
-        isUpdated = False
+        now = datetime.now(UTC)
         
-        for schema_state in wrapper.context.schema_state_list:
-            if(schema_state.schema.name == parsed.name):
-                schema_state.schema = parsed
-                isUpdated = True
-                break
-        if isUpdated:
-            return f"Updated {parsed.display_name} successfully"
-        return f"Not found {parsed.display_name} in the context"
+        user_id = wrapper.context.user_id
+        
+        
+        db = MongoDBHandler(mongodb_conn, db_name)
+        
+        db_schema_value = {
+            "user_id": user_id,
+            "name": parsed.name,
+            "display_name": parsed.display_name,
+            "description": parsed.description,
+            "fields": [
+                {
+                    "name": field.name,
+                    "display_name": field.display_name,
+                    "description": field.description,
+                    "data_type": field.data_type,
+                    "created_at": now,
+                } for field in parsed.fields
+            ],
+            "created_at": now,
+        }
+        
+        modified_count = db.update_document("SCHEMAS", {"user_id": user_id, "name": db_schema_value["name"]}, db_schema_value)
+        
+        db.close_connection()
+        
+        if modified_count <= 0:
+            return f"Not found {parsed.display_name} in the db"
+            
+        return f"Updated {parsed.display_name} successfully"
+        
     except Exception as e:
         return f"Error happened when updating {parsed.display_name}"
 
@@ -128,8 +186,15 @@ async def delete_schema(wrapper: RunContextWrapper[AssistantContext], schema_nam
     try:
         target_schema_state = next(schema_state for schema_state in wrapper.context.schema_state_list if schema_state.schema.name == schema_name)
         if target_schema_state:
-            wrapper.context.schema_state_list.remove(target_schema_state)
-            return f"Deleted {schema_name} schema in the context successfully"
+            db = MongoDBHandler(mongodb_conn, db_name)
+            user_id = wrapper.context.user_id
+            
+            schema_name = target_schema_state.schema.name
+            
+            deleted_count = db.delete_document("SCHEMAS", {"user_id": user_id, "name": schema_name})
+            
+            if deleted_count > 0:
+                return f"Deleted {schema_name} schema in the database successfully"
         return f"Not found any schema named {schema_name}"
     except Exception as e:
         return f"Error happened while deleting the {schema_name} schema in the context"
@@ -153,7 +218,8 @@ recommend_schema_agent = Agent[AssistantContext](
     name = "recommend_schema_agent",
     model="gpt-4o-mini",
     instructions=""" You are helpful assistant, you are responsible for recommending the most detailed schema fields in case of not existing schema in the context based on user input, just recommend fields you are possible to store and most important, notice that no nested field
-    Notice that you recommend the Human-readable fields
+    Notice that you recommend the Human-readable fields (display name to be friendly with users)
+    DO NOT recommend user_id or something like that
     After recommend fields, suggest that you can help them to create that schema in the memory
     """
 )
@@ -175,6 +241,7 @@ schema_agent = Agent[AssistantContext](
     6. Have to refer the context, use it to personalize the response.
     7. If user wants to recorver deleted schemas, you have to refer to chat history then notice that you can not recover that, you only can recreate them, waiting for user confirmation, and hand off them for create_schema_agent
     8. DO NOT return records of schemas to user
+    9. DO NOT show anything related to user_id, cause it is used to stored in the system
     
     """,
     handoffs=[create_schema_agent, update_schema_agent, delete_schema_agent, recommend_schema_agent],
@@ -182,88 +249,39 @@ schema_agent = Agent[AssistantContext](
 )
 
 async def main():
-    input_items: list[TResponseInputItem] = []
-    mock_record_1 = RecordBase(
-        schema_name="todolist",
-        data={
-            "task_title": "Prepare presentation",
-            "description": "Create slides for quarterly review meeting",
-            "due_date": datetime(2025, 3, 20, 14, 0),  # March 20, 2025, 2:00 PM UTC
-            "priority": "high",
-            "status": "pending",
-            "created_date": datetime(2025, 3, 17, 9, 0),  # March 17, 2025, 9:00 AM UTC
-            "assigned_to": "alice.jones@example.com"
-        },
-        metadata={
-            "source": "work",
-            "tags": ["meeting", "presentation", "urgent"]
-        }
-    )
-
-    mock_record_2 = RecordBase(
-        schema_name="todolist",
-        data={
-            "task_title": "Schedule dentist appointment",
-            "description": "Book annual checkup for next month",
-            "due_date": datetime(2025, 3, 25, 12, 0),  # March 25, 2025, 12:00 PM UTC
-            "priority": "low",
-            "status": "pending",
-            "created_date": datetime(2025, 3, 18, 10, 30),  # March 18, 2025, 10:30 AM UTC
-            "assigned_to": "bob.smith@example.com"
-        },
-        metadata={
-            "source": "personal",
-            "tags": ["health", "appointment"]
-        }
-    )
-
-    mock_record_3 = RecordBase(
-        schema_name="todolist",
-        data={
-            "task_title": "Review code changes",
-            "description": "Check pull request #123 for new feature",
-            "due_date": datetime(2025, 3, 19, 17, 0),  # March 19, 2025, 5:00 PM UTC
-            "priority": "medium",
-            "status": "completed",
-            "created_date": datetime(2025, 3, 16, 13, 0),  # March 16, 2025, 1:00 PM UTC
-            "assigned_to": "charlie.dev@example.com"
-        },
-        metadata={
-            "source": "development",
-            "tags": ["coding", "review", "team"]
-        }
-    )
+    user_id = "khanh"
     with trace(" 2025-03-15 Schema agent"):
-        schemas = [
-            SchemaState(
-                schema=Schema(
-                    name='todolist', 
-                    display_name='Todo List', 
-                    description='Task management for users', 
-                    fields=[
-                        SchemaField(name='task_title', display_name='Task Title', description='Brief title for the task', data_type='string'), 
-                        SchemaField(name='description', display_name='Description', description='Detailed description of the task', data_type='string'), 
-                        SchemaField(name='due_date', display_name='Due Date', description='Date by which the task should be completed', data_type='datetime'), 
-                        SchemaField(name='priority', display_name='Priority', description='Priority level (low, medium, high)', data_type='string'), 
-                        SchemaField(name='status', display_name='Status', description='Current status of the task (pending, completed)', data_type='string'), 
-                        SchemaField(name='created_date', display_name='Created Date', description='Date when the task was created', data_type='datetime'), 
-                        SchemaField(name='assigned_to', display_name='Assigned To', description='Person responsible for the task', data_type='string')
-                        ]
-                    ), 
-                records=[mock_record_1, mock_record_2, mock_record_3], 
-                created_at=datetime(2025, 3, 14))
-            ]
+        input_items: list[TResponseInputItem] = []
+
+        db = MongoDBHandler(mongodb_conn, db_name)
+
+        db_schemas = db.find_documents("SCHEMAS", {"user_id": user_id})
         
-        initial_context = AssistantContext(schema_state_list=schemas)        
+        db_records = db.find_documents("RECORDS", {"user_id": user_id})
+        
+        schema_states = [
+            SchemaStateDto(
+                schema=SchemaDto(
+                    name=db_schema["name"], 
+                    display_name=db_schema["display_name"], 
+                    description = db_schema["description"],
+                    fields=[SchemaFieldDto(name = field["name"], display_name=field["display_name"], description = field["description"], data_type=field["data_type"]) for field in db_schema["fields"] ]
+                    ), 
+                records = [RecordBaseDto(id=record["id"], schema_name=record["schema_name"], data=record["data"], metadata=record["metadata"]) for record in db_records if record["schema_name"] == db_schema["name"]]) 
+                for db_schema in db_schemas
+            ]
+        db.close_connection()
+        
+        context = AssistantContext(user_id="khanh", schema_state_list=schema_states)        
         
         while True:
             msg = input("Message: ")
             input_items.append({"content": msg, "role": "user"})
             
-            print("context: ", initial_context)
+            print("context: ", context)
 
             try:
-                res = await Runner.run(schema_agent, input_items, context=initial_context)
+                res = await Runner.run(schema_agent, input_items, context=context)
                 input_items = res.to_input_list()
                 print("Agent response: ", res.final_output)
                 

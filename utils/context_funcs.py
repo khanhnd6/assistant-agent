@@ -1,11 +1,11 @@
 from agents import function_tool, RunContextWrapper
 
-from models.context import AssistantContext
-from models.schema_state import SchemaState
+from models.DTOs.context import AssistantContext
+from models.DTOs.schema_state import SchemaStateDto
 from typing import List
 import json
 
-def simplify_schema_context(schema_state_list: List[SchemaState], indent=2) -> str:
+def simplify_schema_context(schema_state_list: List[SchemaStateDto], indent=2) -> str:
     if schema_state_list:
         context_dict = {
             "schema_state_list": [

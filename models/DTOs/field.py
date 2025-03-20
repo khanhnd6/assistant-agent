@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Literal,Any
 from datetime import datetime
 
-class SchemaField(BaseModel):
+class SchemaFieldDto(BaseModel):
     name: str = Field(description="Unique field name, no spaces or special characters")
     display_name: str = Field(description="Human-readable field name")
     description: str = Field(description="Field description")
