@@ -278,11 +278,12 @@ async def main():
             msg = input("Message: ")
             input_items.append({"content": msg, "role": "user"})
             
+            
             print("context: ", context)
-
+            
             try:
                 res = await Runner.run(schema_agent, input_items, context=context)
-                input_items = res.to_input_list()
+                input_items = input_items + [res.to_input_list()[-1]]
                 print("Agent response: ", res.final_output)
                 
             except Exception as e:
