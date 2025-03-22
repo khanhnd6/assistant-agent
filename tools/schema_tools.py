@@ -1,17 +1,33 @@
 from agents import FunctionTool, RunContextWrapper
 from utils.context import CollectionSchema, UserContext
-from utils.database import db
+from utils.database import MongoDBConnection
 import json
 
 async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
+        print('create_schema')
         parsed = CollectionSchema.model_validate_json(args)
         user_id = wrapper.context.user_id
-        user_collection = db["user_context"]
-        user_collection.insert_one({
-            "user_id": user_id,
-            "schema": parsed.model_dump()
-        })
+        mongodb_connection = MongoDBConnection()
+        db = mongodb_connection.get_database()
+        user_schemas = db["SCHEMAS"]
+        
+        schema = parsed.model_dump()
+        schema["user_id"] = user_id
+        
+        existing_schema = user_schemas.find_one({"user_id": user_id, "name": schema["name"]})
+        if existing_schema:
+            if not existing_schema["deleted"]:
+                return "Schema is existing now"
+            else:
+                user_schemas.update_one({"user_id": user_id, "name": schema["name"]}, {"$set": {"deleted": False}})
+        else:
+            user_schemas.insert_one(schema)
+            # Cập nhật thay đổi ở context
+            wrapper.context.schemas.append(schema)
+            #
+        mongodb_connection.close_connection()
+        
         return 'Success'
     except Exception as e:
         return 'Error'
@@ -20,11 +36,25 @@ async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
     try:
         parsed = CollectionSchema.model_validate_json(args)
         user_id = wrapper.context.user_id
-        user_collection = db["user_context"]
-        user_collection.update_one(
-            {"user_id": user_id, "schema.name": parsed.name}, 
-            {"$set": {"schema": parsed.model_dump()}},
+        schema = parsed.model_dump()
+        schema["user_id"] = user_id
+        schema["deleted"] = False
+        
+        mongodb_connection = MongoDBConnection()
+        db = mongodb_connection.get_database()
+        user_schemas = db["SCHEMAS"]
+        user_schemas.update_one(
+            {"user_id": user_id, "name": parsed.name, "deleted": False}, 
+            {"$set": schema}
         )
+        # Cập nhật thay đổi ở context
+        for i, s in enumerate(wrapper.context.schemas):
+            if s["name"] == parsed.name:
+                wrapper.context.schemas[i] = parsed
+                break
+        #
+        mongodb_connection.close_connection()
+        
         return 'Success'
     except Exception as e:
         return 'Error'
@@ -33,8 +63,15 @@ async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> s
     try:
         user_id = wrapper.context.user_id
         info = json.loads(info)
-        user_collection = db["user_context"]
-        user_collection.delete_one({"user_id": user_id, "schema.name": info['name']})
+        mongodb_connection = MongoDBConnection()
+        db = mongodb_connection.get_database()
+        user_schemas = db["SCHEMAS"]
+        user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
+        # Cập nhật thay đổi ở context
+        wrapper.context.schemas = [s for s in wrapper.context.schemas if s["name"] != info["name"]]
+        #
+        mongodb_connection.close_connection()
+        
         return 'Success'
     except Exception as e:
         return 'Error'

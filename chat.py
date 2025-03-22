@@ -1,8 +1,8 @@
 from agents import Runner, set_tracing_export_api_key
+from utils.database import MongoDBConnection
 from agent_collection import navigator_agent
 from utils.context import UserContext
 from dotenv import load_dotenv
-from utils.database import db
 import asyncio
 import os
 
@@ -14,14 +14,27 @@ chat_input = []
 async def chat(message: str, user_id: str):
     global context, chat_input
     if context == None and user_id:
-        records = db.user_context.find({"user_id": user_id})
-        if records: 
-            schemas = [record["schema"] for record in records if "schema" in record]
+        mongodb_connection = MongoDBConnection()
+        db = mongodb_connection.get_database()
+        db_schemas = db["SCHEMAS"].find({"user_id": user_id})
+        # db_user_profile = db["USER_PROFILES"].find({"user_id": user_id})
+        
+        mongodb_connection.close_connection()
+        
+        if db_schemas: 
+            schemas = [record for record in db_schemas]
+            # user_information = db_user_profile[0]
+            user_information = ''
             context = UserContext(user_id = user_id, schemas=schemas)
-            message = f"""
-            Đây là thông tin các bảng của tôi: {schemas}. 
-            Tôi chỉ cung cấp ngữ cảnh cho bạn, bạn không cần phải trả lời về chúng mà cần ghi nhớ chúng.
-            Giờ quay lại cuộc đối thoại chính của chúng ta: {message}
+            message = f"""Your Context:
+            1. User information:
+            {user_information}
+            
+            2. Table schemas with structure 
+            {schemas}
+            
+            You have to refer to user information and schemas in the context to personalize the response and use it as the context
+            Proceed with main user's request: {message}.
             """
         else: context = UserContext(user_id=user_id)
 
@@ -30,11 +43,11 @@ async def chat(message: str, user_id: str):
         navigator_agent, 
         input=chat_input,
         context=context)
-    chat_input = result.to_input_list()
+    chat_input = chat_input + [result.to_input_list()[-1]]
     return result.final_output
 
-# while True:
-#     message = input("Nhập câu hỏi: ")
-#     if message == "exit": break
-#     response = asyncio.run(chat(message, '0001'))
-#     print(response)
+while True:
+    message = input("Nhập câu hỏi: ")
+    if message == "exit": break
+    response = asyncio.run(chat(message, 'khanh'))
+    print(response)

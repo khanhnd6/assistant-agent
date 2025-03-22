@@ -5,32 +5,30 @@ import os
 load_dotenv()
 
 class MongoDBConnection:
-    _instance = None
+    def __init__(self):
+        self.connection_string = os.getenv("MONGODB_CONN")
+        self.database_name = os.getenv("MONGODB_DATABASE")
+        
+        if not self.connection_string or not self.database_name:
+            raise ValueError("MongoDB connection string or database name not provided and not found in environment variables")
+        
+        self.client = None
+        self.db = None
+        try:
+            self.client = MongoClient(self.connection_string)
+            self.db = self.client[self.database_name]
+            self.client.server_info()
+            print("MongoDB connected successfully")
+        except Exception as e:
+            print(f"Failed to connect to MongoDB: {e}")
+            raise
 
-    def __new__(cls, uri, db_name):
-        if cls._instance is None:
-            cls._instance = super(MongoDBConnection, cls).__new__(cls)
-            cls._instance.client = MongoClient(uri)
-            cls._instance.db = cls._instance.client[db_name]
-        return cls._instance
-
+    def close_connection(self):
+        try:
+            if self.client:
+                self.client.close()
+        except Exception as e:
+            print(f"Error closing connection: {e}")
+    
     def get_database(self):
         return self.db
-    
-    def is_connected(self):
-        try:
-            self.client.admin.command('ping')
-            return True
-        except Exception as e:
-            print(f"MongoDB connection error: {e}")
-            return False
-
-# Sử dụng
-mongo_conn = MongoDBConnection(uri=os.getenv("MONGODB_CONN"), db_name=os.getenv("MONGODB_DATABASE"))
-db = mongo_conn.get_database()
-
-# Kiểm tra kết nối
-if mongo_conn.is_connected():
-    print("Kết nối MongoDB thành công!")
-else:
-    print("Không thể kết nối MongoDB.")
