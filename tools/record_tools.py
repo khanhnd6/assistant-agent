@@ -1,14 +1,7 @@
-from agents import FunctionTool, RunContextWrapper, function_tool
+from agents import FunctionTool, RunContextWrapper
 from utils.database import MongoDBConnection
 from utils.context import UserContext, CreateRecordSchema
 import json
-
-@function_tool
-async def get_schema_tool(wrapper: RunContextWrapper[UserContext]) -> str:
-    try:
-        return wrapper.context.schemas
-    except Exception as e:
-        return 'Error'
 
 async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:

@@ -3,6 +3,21 @@ from typing import List, Literal, Optional
 from pydantic import Field, BaseModel
 from datetime import date
 
+# Đối tượng đại diện cho yêu cầu đầu vào của hàm vẽ biểu đồ
+class PlotSchema(BaseModel):
+    data: List[dict] = Field(..., description="Danh sách các dictionary, mỗi dictionary là một hàng dữ liệu.")
+    x: Optional[str] = Field(None, description="Cột được chọn làm trục X.")
+    y: Optional[str] = Field(None, description="Cột được chọn làm trục Y.")
+    chart_type: Literal["line", "scatter", "bar", "hist", "box"] = Field(..., description="Loại biểu đồ cần vẽ.")
+    hue: Optional[str] = Field(None, description="Cột dùng để nhóm dữ liệu theo màu sắc.")
+    model_config = {"json_schema_extra": {'additionalProperties': False}}
+
+# Đối tượng đại diện cho yêu cầu đầu vào của hàm gửi filter
+class FilterRecordSchema(BaseModel):
+    pipeline: str = Field(description="JSON array of object")
+    collection: str = Field(description="Collection's name of schema")
+    model_config = {"json_schema_extra": {"additionalProperties": False}}
+
 # Đối tượng đại diện cho yêu cầu đầu vào của hàm tạo record
 class CreateRecordSchema(BaseModel):
     records: str = Field(description="JSON array of object")

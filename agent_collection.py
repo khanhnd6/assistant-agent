@@ -1,5 +1,7 @@
 from tools.schema_tools import create_schema_tool, update_schema_tool, delete_schema_tool
-from tools.record_tools import create_records_tool, get_schema_tool
+from tools.analysis_tools import filter_records_tool, plot_records_tool
+from tools.record_tools import create_records_tool
+from tools.context_tools import get_schema_tool
 from tools.research_tools import research_tool
 from agents import Agent, ModelSettings
 from utils.context import UserContext
@@ -26,6 +28,8 @@ analysis_agent = Agent[UserContext](
     name="analysis_agent",
     model=model,
     instructions=ANALYSIS_AGENT_INSTRUCTION,
+    tools=[get_schema_tool, filter_records_tool],
+    model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
 research_agent = Agent[UserContext](
