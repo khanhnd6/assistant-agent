@@ -5,7 +5,6 @@ import json
 
 async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
-        print('create_schema')
         parsed = CollectionSchema.model_validate_json(args)
         user_id = wrapper.context.user_id
         mongodb_connection = MongoDBConnection()

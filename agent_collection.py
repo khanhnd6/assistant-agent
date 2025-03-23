@@ -5,6 +5,7 @@ from tools.context_tools import get_schema_tool
 from tools.research_tools import research_tool
 from agents import Agent, ModelSettings
 from utils.context import UserContext
+from utils.date import current_time
 from instructions import *
 
 model="gpt-4o-mini"
@@ -28,7 +29,7 @@ analysis_agent = Agent[UserContext](
     name="analysis_agent",
     model=model,
     instructions=ANALYSIS_AGENT_INSTRUCTION,
-    tools=[get_schema_tool, filter_records_tool],
+    tools=[current_time, get_schema_tool, filter_records_tool, plot_records_tool],
     model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
@@ -36,15 +37,14 @@ research_agent = Agent[UserContext](
     name="research_agent",
     model=model,
     instructions=RESEARCH_AGENT_INSTRUCTION,
-    tools=[research_tool],
+    tools=[current_time, research_tool],
+    model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
 navigator_agent = Agent[UserContext](
     name="navigator_agent",
     model=model,
-    handoff_description="Based on user request and information received from previous agent, find suitable handoffs to deal",
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
     handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
+    tools=[current_time]
 )
-
-# research_agent.handoffs.append(navigator_agent)

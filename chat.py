@@ -47,7 +47,9 @@ async def chat(message: str, user_id: str):
     return result.final_output
 
 while True:
-    message = input("Nhập câu hỏi: ")
-    if message == "exit": break
+    message = input("Nhập tin nhắn: ")
+    if message == "q": 
+        os.system("cls")
+        break
     response = asyncio.run(chat(message, 'khanh'))
     print(response)
