@@ -46,10 +46,10 @@ async def chat(message: str, user_id: str):
     chat_input = chat_input + [result.to_input_list()[-1]]
     return result.final_output
 
-while True:
-    message = input("Nhập tin nhắn: ")
-    if message == "q": 
-        os.system("cls")
-        break
-    response = asyncio.run(chat(message, 'khanh'))
-    print(response)
+# while True:
+#     message = input("Nhập tin nhắn: ")
+#     if message == "q": 
+#         os.system("cls")
+#         break
+#     response = asyncio.run(chat(message, 'khanh'))
+#     print(response)

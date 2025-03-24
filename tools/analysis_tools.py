@@ -45,10 +45,10 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
 
         plt.xlabel(x if x else "")
         plt.ylabel(y if y else "")
-        file_name = "chart.png"
-        plt.savefig(file_name,  dpi=300)
+        file_name = "image.jpg"
+        plt.savefig(file_name)
         plt.close()
-        return 'Success'
+        return 'SUCCESS'
     except Exception as e:
         print('Error', e)
 

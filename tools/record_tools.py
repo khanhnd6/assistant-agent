@@ -15,6 +15,7 @@ async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
         query = config_record(convert_date(json.loads(parsed["records"])))
         result = user_collection.insert_many(query)
         mongodb_connection.close_connection() 
+        print(result.inserted_ids)
         return str(result.inserted_ids)
     except Exception as e:
         return f'Error'

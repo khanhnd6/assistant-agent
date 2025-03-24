@@ -16,7 +16,13 @@ async def handle_message(update: Update, context: CallbackContext):
         user_id = update.message.from_user.id
     message = update.message.text
     response = await chat(message, user_id)
-    await update.message.reply_text(str(response))
+    await update.message.reply_text(str(response), parse_mode='markdown')
+
+    photo_path = "image.jpg"
+    if os.path.exists(photo_path):  
+        with open(photo_path, "rb") as photo:
+            await update.message.reply_photo(photo=photo)
+        os.remove(photo_path)
 
 if __name__ == "__main__":
     # Tạo cổng lắng nghe tin nhắn gửi đến chatbot
