@@ -14,7 +14,6 @@ context = None
 chat_input = []
 async def chat(message: str, user_id: str):
     global context, chat_input
-    print(chat_input)
     if context == None and user_id:
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
@@ -49,11 +48,9 @@ async def chat(message: str, user_id: str):
     return result.final_output
 
 while True:
-    message = input("Nhập tin nhắn: ")
+    message = input("Nhập câu hỏi: ")
     if message == "q": 
         os.system("cls")
         break
-    message = input("Nhập câu hỏi: ")
-    if message == "exit": break
     response = asyncio.run(chat(message, 'khanh'))
     print(response)

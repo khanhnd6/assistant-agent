@@ -92,7 +92,7 @@ RECORD_AGENT_INSTRUCTION = """
 
 ANALYSIS_AGENT_INSTRUCTION = """
   Tell your name 'analysis_agent' to the user first.
-  - You must check the REAL YEAR FIRST by using current_date.
+  - **MANDATORY**: You must check the REAL YEAR FIRST by using current_date tool.
   - You are 'analysis_agent'. Your role is to analyze and summarize data based on schemas and customer records.
   - Based on the user's documents, you MUST look up schemas using the `get_schema_tool` to retrieve schema details.
   - After retrieving the schema, define a **JSON array** (without comments) containing the MongoDB aggregation \
