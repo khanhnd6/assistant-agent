@@ -22,9 +22,7 @@ async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
                 user_schemas.update_one({"user_id": user_id, "name": schema["name"]}, {"$set": {"deleted": False}})
         else:
             user_schemas.insert_one(schema)
-            # Cập nhật thay đổi ở context
             wrapper.context.schemas.append(schema)
-            #
         mongodb_connection.close_connection()
         
         return 'Success'
@@ -69,6 +67,9 @@ async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> s
         # Cập nhật thay đổi ở context
         wrapper.context.schemas = [s for s in wrapper.context.schemas if s["name"] != info["name"]]
         #
+        db = mongodb_connection.db
+        user_schemas = db["SCHEMAS"]
+        user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
         mongodb_connection.close_connection()
         
         return 'Success'
@@ -85,7 +86,7 @@ create_schema_tool = FunctionTool(
             "display_name": "Human-readable name",  # e.g., 'Todo List'
             "description": "Purpose of the schema",
             "fields": [
-                {"name": "field_name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
+                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
             ]
         }
         This tool is only invoked when executing the `create` action for schema management.
@@ -104,7 +105,7 @@ update_schema_tool = FunctionTool(
             "display_name": This value must remain unchanged,
             "description": "This value must remain unchanged,
             "fields": [
-                {"name": "field_name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
+                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
             ]
         }
         Only `fields` should be updated while `name` and `description` remain unchanged

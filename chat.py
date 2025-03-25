@@ -4,6 +4,7 @@ from agent_collection import navigator_agent
 from utils.context import UserContext
 from dotenv import load_dotenv
 import asyncio
+import json
 import os
 
 load_dotenv()
@@ -13,6 +14,7 @@ context = None
 chat_input = []
 async def chat(message: str, user_id: str):
     global context, chat_input
+    print(chat_input)
     if context == None and user_id:
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
@@ -46,10 +48,12 @@ async def chat(message: str, user_id: str):
     chat_input = chat_input + [result.to_input_list()[-1]]
     return result.final_output
 
-# while True:
-#     message = input("Nhập tin nhắn: ")
-#     if message == "q": 
-#         os.system("cls")
-#         break
-#     response = asyncio.run(chat(message, 'khanh'))
-#     print(response)
+while True:
+    message = input("Nhập tin nhắn: ")
+    if message == "q": 
+        os.system("cls")
+        break
+    message = input("Nhập câu hỏi: ")
+    if message == "exit": break
+    response = asyncio.run(chat(message, 'khanh'))
+    print(response)

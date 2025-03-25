@@ -23,14 +23,17 @@ class CreateRecordSchema(BaseSchema):
     records: str = Field(description="JSON array of object")
     collection: str = Field(description="Collection's name of schema")
 
+
 # Đối tượng đại diện cho schema của 1 cột
 class FieldSchema(BaseSchema):
     name: str = Field(description="Unique field name, no spaces or special characters")
+    display_name: str = Field(description="Human-readable name")
     description: str = Field(description="Field description")
     data_type: Literal["string", "int", "float", "bool", "datetime"] = Field(description="Field type (string, int, float, bool, datetime)")
 
 # Đối tượng đại diện cho schema của 1 bảng/collection
 class CollectionSchema(BaseSchema):
+    user_id: Optional[str] = Field(description="User Id", default_factory=None)
     name: str = Field(description="Unique schema name, no spaces or special characters")
     display_name: str = Field(description="Human-readable schema name")
     description: str = Field(description="Schema description")
@@ -51,4 +54,5 @@ class UserProfile(BaseSchema):
 class UserContext:
     user_id: str
     schemas: List[CollectionSchema] = field(default_factory=list)
+    user_profile: UserProfile = field(default=None)
 

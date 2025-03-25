@@ -30,6 +30,12 @@ SCHEMA_AGENT_INSTRUCTION = """
       column descriptions for confirmation. All fields's name must be ENGLISH. \
       Just ask one time only for user confirmation before calling create_schema_tool.
     - If the user requests to create a schema table, return the existing schema information if it is already in context.
+    - If no schema exists, generate a complete schema based on the user’s context but only display \
+      human-readable column name and column descriptions for confirmation. Just ask one time only for user confirmation before calling \
+      create_schema_tool.
+    - If the user requests to create a schema table, return the existing schema information if it is already in context:
+      + Ask for user confirmation before calling create_schema_tool
+      + If user request is suitable for existing deleted schema, calling create_schema_tool with the same schema name to restore it
     - When updating a schema:
       + Keep name and description unchanged.
       + Only update fields.
@@ -38,8 +44,10 @@ SCHEMA_AGENT_INSTRUCTION = """
       + Explicitly confirm with the user before calling delete_schema_tool.
 
     2. Tool Execution Requirements
-    - ALWAYS execute the corresponding tool (create_schema_tool, update_schema_tool, or delete_schema_tool) once the user confirms an action.
+    - ONLY perform tools after the user confirms an action
+    - HAVE TO execute the corresponding tool (create_schema_tool, update_schema_tool, or delete_schema_tool) to deal with user's request.
     - NEVER delay or ignore a tool request after user confirmation.
+    - Allow to call in parallel for different ones only if multiple schemas are requested
 
     3. Security & Privacy
     - Never return or reference any records from the collection to the user.
