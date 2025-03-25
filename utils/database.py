@@ -5,9 +5,9 @@ import os
 load_dotenv()
 
 class MongoDBConnection:
-    def __init__(self, connection_string=None, database_name=None):
-        self.connection_string = connection_string or os.getenv("MONGODB_CONN")
-        self.database_name = database_name or os.getenv("MONGODB_DATABASE")
+    def __init__(self):
+        self.connection_string = os.getenv("MONGODB_CONN")
+        self.database_name = os.getenv("MONGODB_DATABASE")
         
         if not self.connection_string or not self.database_name:
             raise ValueError("MongoDB connection string or database name not provided and not found in environment variables")
@@ -32,7 +32,3 @@ class MongoDBConnection:
     
     def get_database(self):
         return self.db
-
-# Sử dụng
-# mongo_conn = MongoDBConnection(uri=os.getenv("MONGODB_CONN"), db_name=os.getenv("MONGODB_DATABASE"))
-# db = mongo_conn.get_database()

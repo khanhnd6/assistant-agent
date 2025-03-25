@@ -1,8 +1,8 @@
 from agents import Runner, set_tracing_export_api_key
+from utils.database import MongoDBConnection
 from agent_collection import navigator_agent
 from utils.context import UserContext
 from dotenv import load_dotenv
-from utils.database import MongoDBConnection
 import asyncio
 import json
 import os
@@ -19,13 +19,14 @@ async def chat(message: str, user_id: str):
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
         db_schemas = db["SCHEMAS"].find({"user_id": user_id})
-        db_user_profile = db["USER_PROFILES"].find({"user_id": user_id})
+        # db_user_profile = db["USER_PROFILES"].find({"user_id": user_id})
         
         mongodb_connection.close_connection()
         
         if db_schemas: 
             schemas = [record for record in db_schemas]
-            user_information = db_user_profile[0]
+            # user_information = db_user_profile[0]
+            user_information = ''
             context = UserContext(user_id = user_id, schemas=schemas)
             message = f"""Your Context:
             1. User information:
@@ -47,8 +48,12 @@ async def chat(message: str, user_id: str):
     chat_input = chat_input + [result.to_input_list()[-1]]
     return result.final_output
 
-# while True:
-#     message = input("Nhập câu hỏi: ")
-#     if message == "exit": break
-#     response = asyncio.run(chat(message, 'khanh'))
-#     print(response)
+while True:
+    message = input("Nhập tin nhắn: ")
+    if message == "q": 
+        os.system("cls")
+        break
+    message = input("Nhập câu hỏi: ")
+    if message == "exit": break
+    response = asyncio.run(chat(message, 'khanh'))
+    print(response)
