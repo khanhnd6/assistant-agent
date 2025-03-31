@@ -23,6 +23,18 @@ class CreateRecordSchema(BaseSchema):
     records: str = Field(description="JSON array of object")
     collection: str = Field(description="Collection's name of schema")
 
+class DataEntry(BaseSchema):
+    schema_name: str = Field(description="Schema's name")
+    record_id: Optional[str] = Field(description="Record ID", default_factory=None)
+    data: str = Field(description="JSON object of data")
+    send_notification_at: str = Field(description="Datetime to send a notification for this record in ISO format", default_factory=None)
+    deleted: Optional[int] = Field(description="The flag to indicate whether the data is deleted or not, 0 is False, 1 is True", default_factory=0) # 0 - False/ 1 - True
+#    categories = list[str] = Field(description="Data categories")
+
+class DeleteRecord(BaseSchema):
+    record_id: str = Field(description="The record ID of data record")
+    schema_name: str = Field(description="The REAL unique schema's name")
+
 
 # Đối tượng đại diện cho schema của 1 cột
 class FieldSchema(BaseSchema):

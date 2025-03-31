@@ -22,7 +22,6 @@ async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
                 user_schemas.update_one({"user_id": user_id, "name": schema["name"]}, {"$set": {"deleted": False}})
         else:
             user_schemas.insert_one(schema)
-            wrapper.context.schemas.append(schema)
         mongodb_connection.close_connection()
         
         return 'Success'
@@ -44,12 +43,6 @@ async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
             {"user_id": user_id, "name": parsed.name, "deleted": False}, 
             {"$set": schema}
         )
-        # Cập nhật thay đổi ở context
-        for i, s in enumerate(wrapper.context.schemas):
-            if s["name"] == parsed.name:
-                wrapper.context.schemas[i] = parsed
-                break
-        #
         mongodb_connection.close_connection()
         
         return 'Success'
@@ -64,9 +57,7 @@ async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> s
         db = mongodb_connection.get_database()
         user_schemas = db["SCHEMAS"]
         user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
-        # Cập nhật thay đổi ở context
-        wrapper.context.schemas = [s for s in wrapper.context.schemas if s["name"] != info["name"]]
-        #
+        
         db = mongodb_connection.db
         user_schemas = db["SCHEMAS"]
         user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
