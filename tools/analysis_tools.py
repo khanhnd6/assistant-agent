@@ -52,25 +52,111 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
     except Exception as e:
         print('Error', e)
 
+# async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
+#     try:
+#         parsed = FilterRecordSchema.model_validate_json(args)
+#         parsed = parsed.model_dump()
+#         mongodb_connection = MongoDBConnection()
+#         db = mongodb_connection.get_database()
+#         user_collection = db[f'{wrapper.context.user_id}_{parsed["collection"]}']
+#         query = convert_date(json.loads(parsed["pipeline"]))
+#         result = user_collection.aggregate(query)
+#         mongodb_connection.close_connection() 
+#         return str(list(result))
+#     except Exception as e:
+#         return f'Error'
+
+
+
 async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
-        parsed = FilterRecordSchema.model_validate_json(args)
-        parsed = parsed.model_dump()
+        parsed_data = FilterRecordSchema.model_validate_json(args)
+        parsed_data = parsed_data.model_dump()
+        
+        user_id = wrapper.context.user_id
+        
+        pipeline = parsed_data["pipeline"]
+        pipeline = json.loads(pipeline) if pipeline else []
+        schema_name = parsed_data["collection"]
+        
+        pipeline = convert_date(pipeline)
+                
+        is_set_condition = False
+        additional_condition = {
+            "_user_id": user_id,
+            "_schema_name": schema_name
+        }
+        
+        for stage in pipeline:
+            if "$match" in stage:
+                
+                if "_deleted" in stage["$match"]:
+                    deleted = stage["$match"]["_deleted"]
+                    additional_condition["_deleted"] = deleted if isinstance(deleted, bool) else (deleted == 1)
+                    
+                stage["$match"].update(additional_condition)
+                is_set_condition = True
+                break
+        
+        if not is_set_condition:
+            pipeline.insert(0, {
+                "$match": {
+                    "_user_id": user_id,
+                    "_schema_name": schema_name
+                }
+            })
+        
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
-        user_collection = db[f'{wrapper.context.user_id}_{parsed["collection"]}']
-        query = convert_date(json.loads(parsed["pipeline"]))
-        result = user_collection.aggregate(query)
-        mongodb_connection.close_connection() 
-        return str(list(result))
+        user_collection = db['RECORDS']
+        
+        results = list(user_collection.aggregate(pipeline))
+        mongodb_connection.close_connection()
+        
+        print(pipeline)
+        
+        return str(results)
     except Exception as e:
-        return f'Error'
+        return f"Error in retrieving data - {e}"
     
+# filter_records_tool = FunctionTool(
+#     name="filter_records_tool",
+#     description="""
+#         This tool retrieves records from the specified collection based on filter criteria.
+#         It takes a defined pipeline JSON array and a schema name to query the database and return result
+#     """,
+#     params_json_schema=FilterRecordSchema.model_json_schema(),
+#     on_invoke_tool=filter_records,
+# )
+
+
 filter_records_tool = FunctionTool(
     name="filter_records_tool",
     description="""
-        This tool retrieves records from the specified collection based on filter criteria.
-        It takes a defined pipeline JSON array and a schema name to query the database and return result
+This tool accepts only data structure like this:
+{
+    "pipeline": "JSON array of object to filterring data",
+    "collection": "The name of schema"
+}
+
+**Note**:
+    - The record data is an object with the structure like this:
+    {
+      "<field1>": "<value1>",
+      "<datetime field2>": <datetime>,
+      "<field3>": <value3>,
+      "<additional field>": <additional value>, // that not in fields of schema
+      "_user_id": "<user id>",
+      "_record_id": "<record id>",
+      "_deleted": False,
+      "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
+    }
+    
+    - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
+    - `collection` is REAL schema name.
+    - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
+    - Data is an object based on fields of schema, filter by it based on REAL field name and data type
+    - Notice that if field type is datetime, passing value in ISO formatted string.
     """,
     params_json_schema=FilterRecordSchema.model_json_schema(),
     on_invoke_tool=filter_records,
