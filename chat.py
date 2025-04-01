@@ -45,11 +45,11 @@ async def chat(message: str, user_id: str):
     r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
     return result.final_output
 
-while True:
-    message = input("Nhập câu hỏi: ")
-    if message == "q": 
-        os.system("cls")
-        break
-    response = asyncio.run(chat(message, 'khanh'))
-    print(response)
+# while True:
+#     message = input("Nhập câu hỏi: ")
+#     if message == "q": 
+#         os.system("cls")
+#         break
+#     response = asyncio.run(chat(message, 'khanh'))
+#     print(response)
 
