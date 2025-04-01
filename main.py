@@ -18,10 +18,10 @@ async def telegram(request: Request):
         query = message['text']
         sender_id = message['from']['id']
         
-        response = asyncio.run(chat(query, sender_id))
+        response = await chat(query, sender_id)
         
         sendMessage(sender_id, response)
-    except:
-        pass
+    except Exception as e:
+        return {"message": f"Error - {str(e)}"}, 400
     finally:
         return {"message": "OK"}, 200
