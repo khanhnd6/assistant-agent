@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Request
 from utils.telegram import sendMessage, sendPhoto
+from chat import chat
+import asyncio
 
 app = FastAPI()
 
@@ -16,7 +18,9 @@ async def telegram(request: Request):
         query = message['text']
         sender_id = message['from']['id']
         
-        sendMessage(sender_id, query)
+        response = asyncio.run(chat(query, sender_id))
+        
+        sendMessage(sender_id, response)
     except:
         pass
     finally:
