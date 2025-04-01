@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import redis
 
 load_dotenv()
 
@@ -32,3 +33,19 @@ class MongoDBConnection:
     
     def get_database(self):
         return self.db
+    
+    
+class RedisCache:
+    def __init__(self):
+        host = os.getenv("REDIS_HOST")
+        port = os.getenv("REDIS_PORT")
+        username = os.getenv("REDIS_USERNAME")
+        password = os.getenv("REDIS_PASSWORD")
+        
+        self.redis = redis.Redis(host=host, port=port, decode_responses=True, username=username, password=password)
+        
+    def set(self, key, value, ex = None):
+        return self.redis.set(key, value, ex=ex)
+
+    def get(self, key):
+        return self.redis.get(key)

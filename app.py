@@ -7,13 +7,9 @@ import os
 # Load biến môi trường
 load_dotenv()
 
-user_id = None
-
 # Hàm xử lí các tin nhắn của chatbot
 async def handle_message(update: Update, context: CallbackContext):
-    global user_id
-    if user_id == None:
-        user_id = update.message.from_user.id
+    user_id = update.message.from_user.id
     message = update.message.text
     response = await chat(message, user_id)
     await update.message.reply_text(str(response), parse_mode='markdown')
