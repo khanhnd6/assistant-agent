@@ -1,7 +1,6 @@
 from agents import FunctionTool, RunContextWrapper
 from utils.database import MongoDBConnection
-from utils.context import UserContext, FilterRecordSchema, DataEntry, DeleteRecord
-from utils.config_record import config_record
+from utils.context import UserContext, FilterRecordSchema, DataEntry, DeleteRecord, RetrieveData
 from utils.date import convert_date
 import json
 import uuid
@@ -62,96 +61,137 @@ create_records_tool = FunctionTool(
     strict_json_schema=True
 )
 
+
+# async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
+#     try:
+#         parsed_data = FilterRecordSchema.model_validate_json(args)
+#         parsed_data = parsed_data.model_dump()
+        
+#         user_id = wrapper.context.user_id
+        
+#         pipeline = parsed_data["pipeline"]
+#         pipeline = json.loads(pipeline) if pipeline else []
+#         schema_name = parsed_data["collection"]
+        
+#         pipeline = convert_date(pipeline)
+                
+#         is_set_condition = False
+#         additional_condition = {
+#             "_user_id": user_id,
+#             "_schema_name": schema_name
+#         }
+        
+#         for stage in pipeline:
+#             if "$match" in stage:
+                
+#                 if "_deleted" in stage["$match"]:
+#                     deleted = stage["$match"]["_deleted"]
+#                     additional_condition["_deleted"] = deleted if isinstance(deleted, bool) else (deleted == 1)
+                    
+#                 stage["$match"].update(additional_condition)
+#                 is_set_condition = True
+#                 break
+        
+#         if not is_set_condition:
+#             pipeline.insert(0, {
+#                 "$match": {
+#                     "_user_id": user_id,
+#                     "_schema_name": schema_name
+#                 }
+#             })
+        
+#         mongodb_connection = MongoDBConnection()
+#         db = mongodb_connection.get_database()
+#         user_collection = db['RECORDS']
+        
+#         results = list(user_collection.aggregate(pipeline))
+#         mongodb_connection.close_connection()
+        
+#         print(pipeline)
+        
+#         return str(results)
+#     except Exception as e:
+#         return f"Error in retrieving data - {e}"
+
+# retrieve_records_tool = FunctionTool(
+#     name="retrieve_record_tool",
+#     description="""
+# This tool accepts only data structure like this:
+# {
+#     "pipeline": "JSON array of object to filterring data",
+#     "collection": "The REAL name of the schema, not `display_name`"
+# }
+
+# **Note**:
+#     - The record data is an object with the structure like this:
+#     {
+#       "_id": "<system identified variable, do not use it anywhere>"
+#       "<field1>": "<value1>",
+#       "<datetime field2>": <datetime>,
+#       "<field3>": <value3>,
+#       "<additional field>": <additional value>, // that not in fields of schema
+#       "_user_id": "<user id>",
+#       "_record_id": "<record id>",
+#       "_schema_name": "<the REAL name of the schema, not `display_name`>",
+#       "_deleted": False,
+#       "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
+#     }
+    
+#     - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
+#     - `collection` is REAL schema name, not `display_name`.
+#     - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
+#     - Data is an object based on fields of schema, filter by it based on REAL field name and data type
+#     - Notice that if field type is datetime, passing value in ISO formatted string.
+#     - Avoid to use user-defined fields to select, it can make missing possible data
+#     - The properties that start with `_` are hyper-parameters, there is no any schema's field named like them (e.g: For `_delete` property, there is not any field named `delete`, so do NOT passing `delete` in stead of `_delete`)
+#     - Do NOT missing `_` with hyper properties.
+    
+    
+# """,
+#     params_json_schema=FilterRecordSchema.model_json_schema(),
+#     on_invoke_tool=retrieve_records,
+#     strict_json_schema=True
+# )
+
+
 async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
-        parsed_data = FilterRecordSchema.model_validate_json(args)
+        parsed_data = RetrieveData.model_validate_json(args)
         parsed_data = parsed_data.model_dump()
         
         user_id = wrapper.context.user_id
         
-        pipeline = parsed_data["pipeline"]
-        pipeline = json.loads(pipeline) if pipeline else []
-        schema_name = parsed_data["collection"]
+        schema_name = parsed_data["schema_name"]
         
-        pipeline = convert_date(pipeline)
-                
-        is_set_condition = False
-        additional_condition = {
+        query = {
             "_user_id": user_id,
             "_schema_name": schema_name
         }
         
-        for stage in pipeline:
-            if "$match" in stage:
-                
-                if "_deleted" in stage["$match"]:
-                    deleted = stage["$match"]["_deleted"]
-                    additional_condition["_deleted"] = deleted if isinstance(deleted, bool) else (deleted == 1)
-                    
-                stage["$match"].update(additional_condition)
-                is_set_condition = True
-                break
-        
-        if not is_set_condition:
-            pipeline.insert(0, {
-                "$match": {
-                    "_user_id": user_id,
-                    "_schema_name": schema_name
-                }
-            })
-        
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
-        user_collection = db['RECORDS']
+        collection = db['RECORDS']
         
-        results = list(user_collection.aggregate(pipeline))
+        records = list(collection.find(query))
         mongodb_connection.close_connection()
         
-        print(pipeline)
-        
-        return str(results)
+        return str(records)
     except Exception as e:
         return f"Error in retrieving data - {e}"
 
 retrieve_records_tool = FunctionTool(
     name="retrieve_record_tool",
     description="""
-This tool accepts only data structure like this:
+This tool will return data of target schema and accepts only data structure like this:
 {
-    "pipeline": "JSON array of object to filterring data",
-    "collection": "The REAL name of the schema, not `display_name`"
+    "schema_name": "The REAL name of the schema, not `display_name`"
 }
-
-**Note**:
-    - The record data is an object with the structure like this:
-    {
-      "_id": "<system identified variable, do not use it anywhere>"
-      "<field1>": "<value1>",
-      "<datetime field2>": <datetime>,
-      "<field3>": <value3>,
-      "<additional field>": <additional value>, // that not in fields of schema
-      "_user_id": "<user id>",
-      "_record_id": "<record id>",
-      "_schema_name": "<the REAL name of the schema, not `display_name`>",
-      "_deleted": False,
-      "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
-    }
-    
-    - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
-    - `collection` is REAL schema name, not `display_name`.
-    - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
-    - Data is an object based on fields of schema, filter by it based on REAL field name and data type
-    - Notice that if field type is datetime, passing value in ISO formatted string.
-    - Avoid to use user-defined fields to select, it can make missing possible data
-    - The properties that start with `_` are hyper-parameters, there is no any schema's field named like them (e.g: For `_delete` property, there is not any field named `delete`, so do NOT passing `delete` in stead of `_delete`)
-    - Do NOT missing `_` with hyper properties.
-    
-    
 """,
-    params_json_schema=FilterRecordSchema.model_json_schema(),
+    params_json_schema=RetrieveData.model_json_schema(),
     on_invoke_tool=retrieve_records,
     strict_json_schema=True
 )
+
 
 async def delete_record(wrapper: RunContextWrapper[UserContext], args: str) -> str: 
     try:

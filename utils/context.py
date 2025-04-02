@@ -31,6 +31,9 @@ class DataEntry(BaseSchema):
     deleted: Optional[int] = Field(description="The flag to indicate whether the data is deleted or not, 0 is False, 1 is True", default_factory=0) # 0 - False/ 1 - True
 #    categories = list[str] = Field(description="Data categories")
 
+class RetrieveData(BaseSchema):
+    schema_name: str = Field(description="The REAL schema name, unique")
+
 class DeleteRecord(BaseSchema):
     record_id: str = Field(description="The record ID of data record")
     schema_name: str = Field(description="The REAL unique schema's name")
