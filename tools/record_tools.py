@@ -39,26 +39,27 @@ async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
 create_records_tool = FunctionTool(
     name="create_record_tool",
     description="""
-        This tool creates a new record in the specified collection.
+        This tool creates a new record in the specified collection. Call this tool once for each different item
         It only accepts data in the following structure:
         {
-            "schema_name": "Schema's name",
-            "data": { 
+            "_schema_name": "The real name of the schema, not `display_name`",
+            "_data": { 
                 // JSON data that follows the fields of the selected schema 
                 // fields of schema are required
                 // Additional information is allowed, optional
             },
-            "send_notification_at": "<datetime> in ISO formatted string"
+            "_send_notification_at": "<datetime> in ISO formatted string"
         }
         Notes:
-        schema_name: Name of the schema this record belongs to.
+        `_schema_name`: the REAL name of the schema this record belongs to, not `display_name`.
 
-        data: Main record data based on schema fields
+        `_data`: Main record data based on schema fields, keys are REAL field name, not `display_name` of the schema
 
-        send_notification_at: Optional. If the user wants a reminder, otherwise leave it empty or null.
+        `_send_notification_at`: Optional. If the user wants a reminder, otherwise leave it empty or null.
     """,
     params_json_schema=DataEntry.model_json_schema(),
     on_invoke_tool=create_records,
+    strict_json_schema=True
 )
 
 async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
@@ -118,31 +119,38 @@ retrieve_records_tool = FunctionTool(
 This tool accepts only data structure like this:
 {
     "pipeline": "JSON array of object to filterring data",
-    "collection": "The name of schema"
+    "collection": "The REAL name of the schema, not `display_name`"
 }
 
 **Note**:
     - The record data is an object with the structure like this:
     {
+      "_id": "<system identified variable, do not use it anywhere>"
       "<field1>": "<value1>",
       "<datetime field2>": <datetime>,
       "<field3>": <value3>,
       "<additional field>": <additional value>, // that not in fields of schema
       "_user_id": "<user id>",
       "_record_id": "<record id>",
+      "_schema_name": "<the REAL name of the schema, not `display_name`>",
       "_deleted": False,
       "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
     }
     
     - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
-    - `collection` is REAL schema name.
+    - `collection` is REAL schema name, not `display_name`.
     - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
     - Data is an object based on fields of schema, filter by it based on REAL field name and data type
     - Notice that if field type is datetime, passing value in ISO formatted string.
     - Avoid to use user-defined fields to select, it can make missing possible data
+    - The properties that start with `_` are hyper-parameters, there is no any schema's field named like them (e.g: For `_delete` property, there is not any field named `delete`, so do NOT passing `delete` in stead of `_delete`)
+    - Do NOT missing `_` with hyper properties.
+    
+    
 """,
     params_json_schema=FilterRecordSchema.model_json_schema(),
-    on_invoke_tool=retrieve_records
+    on_invoke_tool=retrieve_records,
+    strict_json_schema=True
 )
 
 async def delete_record(wrapper: RunContextWrapper[UserContext], args: str) -> str: 
@@ -179,12 +187,13 @@ delete_record_tool = FunctionTool(
     description="""
     This tool is called to delete 1 row of data only based on `schema_name` and `record_id`, it accepts a JSON data structure like:
     {
-        "record_id": "The record ID of data record",
-        "schema_name": "The REAL unique schema's name"
+        "record_id": "The record ID of data record, that is `_record_id`",
+        "schema_name": "The REAL unique schema's name, not `display_name`"
     }
     """,
     params_json_schema=DeleteRecord.model_json_schema(),
-    on_invoke_tool=delete_record
+    on_invoke_tool=delete_record,
+    strict_json_schema=True
 )
 
 
@@ -236,14 +245,24 @@ update_record_tool = FunctionTool(
     description="""
         This tool is used to update existing record of data, it takes in a JSON input with structure:
         {
-            "schema_name": "Schema's name",
-            "record_id": "Record ID",
+            "schema_name": "the REAL schema's name",
+            "record_id": "Record ID is `_record_id`",
             "data": "JSON object of data of schema's fields and other properties if existed",
             "send_notification_at": "Datetime to send a notification for this record in ISO format",
             "deleted": "The flag to indicate whether the data is deleted or not, passing 1 if True, else passing 0"
         }
         Remember that only passing **changed fields**
+        
+        Notes:
+        `_schema_name`: the REAL name of the schema this record belongs to, not `display_name`.
+
+        `_data`: Main changed record data based on schema fields, keys are REAL field name, not `display_name` of the schema
+
+        `send_notification_at`: Optional. If the user wants a reminder, otherwise leave it empty or null.
+        
+        Reflect carefully to fill the data
     """,
     params_json_schema=DataEntry.model_json_schema(),
-    on_invoke_tool=update_record
+    on_invoke_tool=update_record,
+    strict_json_schema=True
 )

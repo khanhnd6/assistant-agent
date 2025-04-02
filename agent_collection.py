@@ -22,7 +22,7 @@ record_agent = Agent[UserContext](
     model=model,
     instructions=RECORD_AGENT_INSTRUCTION,
     tools=[get_schema_tool, current_time, create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.6)
+    model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
 analysis_agent = Agent[UserContext](
@@ -47,6 +47,16 @@ navigator_agent = Agent[UserContext](
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
     handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
     tools=[current_time, get_schema_tool, get_user_profile_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True)
+    handoff_description="""
+Pass the request for exactly agents following:
+    -   schema_agent: All actions related to tables, schemas,...
+    -   record_agent: All actions related to data of exsisting schemas
+    -   analysis_agent: Analysing data based on user input
+    -   research_agent: Resolve and find out solution for user request based on user information.
+    
+    Pass the request to sub-agent will full controls. 
+    Do NOT call sub-agents' tools from navigator_agent, you MUST pass the request to sub-agent, and the tool is called by the sub-agents
+    """,
+    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.6)
     
 )

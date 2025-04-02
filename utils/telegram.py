@@ -1,12 +1,12 @@
 import os
-
+import asyncio
 import requests
 from dotenv import load_dotenv
 load_dotenv()
 
 TELEGRAM_API_KEY = os.getenv('TELEGRAM_TOKEN')
 
-def sendMessage(sender_id: int, message: str) -> None:
+def send_message(sender_id: int, message: str) -> None:
     url = f"https://api.telegram.org/bot{TELEGRAM_API_KEY}/sendMessage"
 
     payload = {
@@ -17,7 +17,7 @@ def sendMessage(sender_id: int, message: str) -> None:
 
     requests.request("POST", url, json=payload, headers=headers)
 
-def sendPhoto(sender_id: int, photo_url: str, caption: str = '') -> None:
+def send_photo(sender_id: int, photo_url: str, caption: str = '') -> None:
 
     url = f"https://api.telegram.org/bot{TELEGRAM_API_KEY}/sendPhoto"
 
@@ -30,3 +30,6 @@ def sendPhoto(sender_id: int, photo_url: str, caption: str = '') -> None:
     headers = {"Content-Type": "application/json"}
 
     requests.request("POST", url, json=payload, headers=headers)
+    
+async def async_send_message(sender_id: int, message: str) -> None:
+    await asyncio.to_thread(send_message, sender_id, message)
