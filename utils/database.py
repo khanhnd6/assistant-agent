@@ -45,7 +45,9 @@ class RedisCache:
         self.redis = redis.Redis(host=host, port=port, decode_responses=True, username=username, password=password)
         
     def set(self, key, value, ex = None):
-        return self.redis.set(key, value, ex=ex)
+        if ex:
+            return self.redis.setex(key, ex, value)
+        return self.redis.set(key, value)
 
     def get(self, key):
         return self.redis.get(key)

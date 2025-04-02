@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
-REDIS_EXPERATION_IN = 3600 # 1 hour
+REDIS_EXPERATION_IN = 1800 # 30 mins
 
 async def chat(message: str, user_id: str):
     try:
