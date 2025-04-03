@@ -1,7 +1,7 @@
 from agents import FunctionTool, RunContextWrapper
 from utils.database import MongoDBConnection
-from utils.context import UserContext, FilterRecordSchema, DataEntry, DeleteRecord, RetrieveData
-from utils.date import convert_date
+from utils.context import UserContext, DataEntry, DeleteRecord, RetrieveData
+from utils.date import convert_date, convert_to_local_timezone
 import json
 import uuid
 
@@ -55,6 +55,8 @@ create_records_tool = FunctionTool(
         `_data`: Main record data based on schema fields, keys are REAL field name, not `display_name` of the schema
 
         `_send_notification_at`: Optional. If the user wants a reminder, otherwise leave it empty or null.
+        
+        Allow to call in parallel with different ones
     """,
     params_json_schema=DataEntry.model_json_schema(),
     on_invoke_tool=create_records,
@@ -168,12 +170,19 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
             "_schema_name": schema_name
         }
         
+        projection = {
+            "_id": 0
+        }
+        
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
         collection = db['RECORDS']
         
-        records = list(collection.find(query))
+        records = list(collection.find(query, projection))
+
         mongodb_connection.close_connection()
+
+        records = convert_to_local_timezone(records)
         
         return str(records)
     except Exception as e:

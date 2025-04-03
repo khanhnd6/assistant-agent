@@ -2,6 +2,7 @@ from datetime import datetime
 from agents import function_tool
 from dateutil import parser
 import pytz
+from tzlocal import get_localzone
 
 @function_tool()
 async def current_time(timezone: str = None) -> str:
@@ -24,4 +25,32 @@ def convert_date(data):
         except (ValueError, TypeError):  # Nếu không phải datetime, giữ nguyên
             return data
     else:
+        return data
+
+def convert_to_local_timezone(data, as_string=True, format_str="%Y-%m-%d %H:%M:%S %z"):
+    """
+    Recursively convert all datetime objects in a data structure to the local timezone.
+    
+    Args:
+        data: Input data (dict, list, datetime, or other).
+        as_string: If True, returns datetimes as formatted strings; if False, returns datetime objects.
+        format_str: Format for string output (used only if as_string=True).
+    
+    Returns:
+        Data with all datetime objects converted to the local timezone.
+    """
+    # Get the local timezone
+    local_tz = get_localzone()
+    utc_tz = pytz.UTC
+
+    if isinstance(data, dict):
+        return {k: convert_to_local_timezone(v, as_string, format_str) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_to_local_timezone(item, as_string, format_str) for item in data]
+    elif isinstance(data, datetime):
+        if data.tzinfo is None:
+            data = utc_tz.localize(data)
+        local_dt = data.astimezone(local_tz)
+        return local_dt.strftime(format_str) if as_string else local_dt
+    else: 
         return data

@@ -48,15 +48,13 @@ navigator_agent = Agent[UserContext](
     handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
     tools=[current_time, get_schema_tool, get_user_profile_tool],
     handoff_description="""
-Pass the request for exactly agents following:
-    -   schema_agent: All actions related to tables, schemas,...
-    -   record_agent: All actions related to data of exsisting schemas
-    -   analysis_agent: Analysing data based on user input
-    -   research_agent: Resolve and find out solution for user request based on user information.
-    
-    Pass the request to sub-agent will full controls. 
-    Do NOT call sub-agents' tools from navigator_agent, you MUST pass the request to sub-agent, and the tool is called by the sub-agents
+Delegate the ENTIRE request to EXACTLY ONE sub-agent:
+    - schema_agent: For schema tasks.
+    - record_agent: For record tasks (including multiple records).
+    - analysis_agent: For analysis tasks.
+    - research_agent: For research tasks.
+    Do NOT call sub-agent tools. Delegate only.
     """,
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.6)
+    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.5)
     
 )

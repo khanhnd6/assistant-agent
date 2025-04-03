@@ -35,23 +35,23 @@ async def chat(message: str, user_id: str):
             # retrieve chat history
             chat_history = r.get(f"chat-history:{user_id}")
             if chat_history:
-                conversation = json.loads(chat_history)
-                
-                
+                chat_history_str = chat_history.decode('utf-8') if isinstance(chat_history, bytes) else chat_history
+                conversation = json.loads(chat_history_str)
+        
         conversation.append({"content": message, "role": "user"})
         result = await Runner.run(
             navigator_agent, 
             input=conversation,
             context=context)
         # conversation = conversation + [result.to_input_list()[-1]]
-        conversation = result.to_input_list()
-        
+        conversation = result.to_input_list()[-80:]
+        print(conversation)
         
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
         return result.final_output
     except Exception as ex:
         logger.error(f"Error in chat: {str(ex)}")
-        raise
+        return "Error happened, please try again!"
 
 # while True:
 #     message = input("Nhập câu hỏi: ")
