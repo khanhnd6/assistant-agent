@@ -25,30 +25,30 @@ async def handle_message(update: Update, context: CallbackContext):
 #     print("Đang chạy chatbot @assistant_tlu_bot..")
 #     app.run_polling()
     
-async def run_bot():
-    app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+# async def run_bot():
+#     app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
     
-    # Add handlers
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
+#     # Add handlers
+#     app.add_handler(MessageHandler(filters.TEXT, handle_message))
     
-    print("Telegram bot is running...")
+#     print("Telegram bot is running...")
     
-    try:
-        await app.initialize()
-        await app.start()
+#     try:
+#         await app.initialize()
+#         await app.start()
         
-        await app.updater.start_polling(drop_pending_updates=True)
+#         await app.updater.start_polling(drop_pending_updates=True)
 
-        await asyncio.Future()
-    except asyncio.CancelledError:
-        print("Bot task cancelled")
-    except Exception as e:
-        print(f"Bot error: {e}")
-    finally:
-        if app.updater and app.updater.running:
-            await app.updater.stop()
-        await app.stop()
-        await app.shutdown()
-        print("Telegram bot has shut down")
+#         await asyncio.Future()
+#     except asyncio.CancelledError:
+#         print("Bot task cancelled")
+#     except Exception as e:
+#         print(f"Bot error: {e}")
+#     finally:
+#         if app.updater and app.updater.running:
+#             await app.updater.stop()
+#         await app.stop()
+#         await app.shutdown()
+#         print("Telegram bot has shut down")
 
     
