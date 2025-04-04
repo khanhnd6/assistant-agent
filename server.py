@@ -3,7 +3,7 @@ import uvicorn
 import asyncio
 from chat import chat
 from utils.telegram import send_message
-from jobs import start_scheduler
+from scheduler import start_scheduler
 
 app = FastAPI()
 scheduler = None
