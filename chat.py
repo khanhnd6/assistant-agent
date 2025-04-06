@@ -1,4 +1,4 @@
-from agents import Runner, set_tracing_export_api_key
+from agents import Runner, set_tracing_export_api_key, set_default_openai_key
 from utils.database import MongoDBConnection, RedisCache
 from agent_collection import navigator_agent
 from utils.context import UserContext
@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+# set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
 REDIS_EXPERATION_IN = 1800 # 30 mins
@@ -46,7 +47,7 @@ async def chat(message: str, user_id: str):
         # conversation = conversation + [result.to_input_list()[-1]]
         conversation = result.to_input_list()[-80:]
         print(conversation)
-        
+
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
         return result.final_output
     except Exception as ex:
@@ -58,6 +59,6 @@ async def chat(message: str, user_id: str):
 #     if message == "q": 
 #         os.system("cls")
 #         break
-#     response = asyncio.run(chat(message, 'khanh'))
+#     response = asyncio.run(chat(message, 'khanh2'))
 #     print(response)
 

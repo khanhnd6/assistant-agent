@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request, HTTPException
 import uvicorn
 import asyncio
+import os
 from chat import chat
-from utils.telegram import send_message
+from utils.telegram import send_message, send_photo
 from scheduler import start_scheduler
 
 app = FastAPI()
@@ -26,6 +27,10 @@ async def telegram(request: Request):
         
         reply_message = await chat(message_text, sender_id)
         send_message(sender_id, reply_message)
+        file_name = f"{sender_id}_image.jpg"
+        if os.path.exists(file_name):
+            send_photo(sender_id, file_name)
+            os.remove(file_name)
     except Exception as e:
         print(f"Error processing request: {str(e)}")
     return {"message": "OK"}, 200

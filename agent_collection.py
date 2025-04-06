@@ -1,5 +1,5 @@
 from tools.schema_tools import create_schema_tool, update_schema_tool, delete_schema_tool
-from tools.analysis_tools import filter_records_tool, plot_records_tool
+from tools.analysis_tools import filter_records_tool, plot_records_tool, retrieve_sample_tool
 from tools.record_tools import create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool
 from tools.context_tools import get_schema_tool, get_user_profile_tool
 from tools.research_tools import research_tool
@@ -29,15 +29,7 @@ analysis_agent = Agent[UserContext](
     name="analysis_agent",
     model=model,
     instructions=ANALYSIS_AGENT_INSTRUCTION,
-    tools=[current_time, get_schema_tool, filter_records_tool, plot_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True)
-)
-
-research_agent = Agent[UserContext](
-    name="research_agent",
-    model=model,
-    instructions=RESEARCH_AGENT_INSTRUCTION,
-    tools=[current_time, research_tool],
+    tools=[current_time, get_schema_tool, filter_records_tool, plot_records_tool, research_tool, retrieve_sample_tool],
     model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
@@ -45,15 +37,14 @@ navigator_agent = Agent[UserContext](
     name="navigator_agent",
     model=model,
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
-    handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
+    handoffs=[schema_agent, record_agent, analysis_agent],
     tools=[current_time, get_schema_tool, get_user_profile_tool],
     handoff_description="""
-Delegate the ENTIRE request to EXACTLY ONE sub-agent:
-    - schema_agent: For schema tasks.
-    - record_agent: For record tasks (including multiple records).
-    - analysis_agent: For analysis tasks.
-    - research_agent: For research tasks.
-    Do NOT call sub-agent tools. Delegate only.
+        Delegate the ENTIRE request to EXACTLY ONE sub-agent:
+        - schema_agent: For schema tasks.
+        - record_agent: For record tasks (including multiple records).
+        - analysis_agent: For analysis and research tasks.
+        Do NOT call sub-agent tools. Delegate only.
     """,
     model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.5)
     
