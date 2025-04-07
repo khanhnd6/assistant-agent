@@ -3,6 +3,7 @@ from tools.analysis_tools import filter_records_tool, plot_records_tool
 from tools.record_tools import create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool
 from tools.context_tools import get_schema_tool, get_user_profile_tool
 from tools.research_tools import research_tool
+from tools.user_profile_tool import save_user_profile_tool, get_db_user_profile_tool
 from agents import Agent, ModelSettings
 from utils.context import UserContext
 from utils.date import current_time
@@ -41,12 +42,27 @@ research_agent = Agent[UserContext](
     model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
+user_profile_agent = Agent[UserContext](
+    name="user_profile_agent",
+    model=model,
+    instructions=USER_PROFILE_AGENT_INSTRUCTION,
+    tools=[save_user_profile_tool, get_db_user_profile_tool]
+)
+
 navigator_agent = Agent[UserContext](
     name="navigator_agent",
-    model=model,
+    model='gpt-4o',
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
     handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
-    tools=[current_time, get_schema_tool, get_user_profile_tool],
+    tools=[
+        current_time, 
+        get_schema_tool, 
+        get_user_profile_tool,
+        user_profile_agent.as_tool(
+            tool_name="user_profile_tool",
+            tool_description="Handle with updating the user's information."
+        ),
+    ],
     handoff_description="""
 Delegate the ENTIRE request to EXACTLY ONE sub-agent:
     - schema_agent: For schema tasks.
@@ -55,6 +71,5 @@ Delegate the ENTIRE request to EXACTLY ONE sub-agent:
     - research_agent: For research tasks.
     Do NOT call sub-agent tools. Delegate only.
     """,
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.5)
-    
+    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.6)    
 )

@@ -56,13 +56,13 @@ class CollectionSchema(BaseSchema):
     deleted: bool = Field(description="Flag to determine whether this schema is deleted or not", default_factory=False)
     
 class UserProfile(BaseSchema):
-    user_id: Optional[str] = Field(default=None, description="User Id")
-    name: Optional[str] = Field(default=None, description="User name")
-    dob: Optional[date] = Field(default=None, description="Date of birth")
-    interests: Optional[list[str]] = Field(default_factory=list, description="Interests")
-    region: Optional[str] = Field(default=None, description="Current user's region")
-    language: Optional[str] = Field(default="English", description="User language")
-    
+    user_id: Optional[str] = Field(default_factory=None, exclude=True, description="User Id")
+    user_name: Optional[str] = Field(default_factory=None, description="User name")
+    dob: Optional[str] = Field(default_factory=None, description="Date of birth in ISO formatted string")
+    interests: Optional[List[str]] = Field(default_factory=None, description="Interests")
+    instructions: Optional[List[str]] = Field(default_factory=None, description="Instructions for personal direction")
+    region: Optional[str] = Field(default_factory=None, description="Current user's region")
+
 # Đối tượng ngữ cảnh của mỗi người dùng
 # Người dùng bao gồm id và danh sách các collection đã tạo
 @dataclass

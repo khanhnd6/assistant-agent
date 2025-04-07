@@ -24,13 +24,10 @@ async def chat(message: str, user_id: str):
             mongodb_connection = MongoDBConnection()
             db = mongodb_connection.get_database()
             db_schemas = db["SCHEMAS"].find({"user_id": user_id})
-            # db_user_profile = db["USER_PROFILES"].find({"user_id": user_id})
+            db_user_profile = db["USER_PROFILES"].find_one({"user_id": user_id}, {"_id": 0})
             mongodb_connection.close_connection()
             
-            if db_schemas: 
-                schemas = [record for record in db_schemas]
-                context = UserContext(user_id = user_id, schemas=schemas)
-            else: context = UserContext(user_id=user_id)
+            context = UserContext(user_id = user_id, schemas=[schema for schema in db_schemas], user_profile=db_user_profile)
             
             # retrieve chat history
             chat_history = r.get(f"chat-history:{user_id}")
@@ -43,9 +40,9 @@ async def chat(message: str, user_id: str):
             navigator_agent, 
             input=conversation,
             context=context)
-        # conversation = conversation + [result.to_input_list()[-1]]
-        conversation = result.to_input_list()[-80:]
-        print(conversation)
+        conversation = conversation + [result.to_input_list()[-1]]
+        conversation = conversation[-80:]
+        # conversation = result.to_input_list()[-50:]
         
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
         return result.final_output
