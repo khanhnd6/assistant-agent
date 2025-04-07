@@ -24,7 +24,7 @@ async def chat(message: str, user_id: str):
         if user_id:
             mongodb_connection = MongoDBConnection()
             db = mongodb_connection.get_database()
-            db_schemas = db["SCHEMAS"].find({"user_id": user_id})
+            db_schemas = db["SCHEMAS"].find({"user_id": user_id}, {"_id": 0})
             db_user_profile = db["USER_PROFILES"].find_one({"user_id": user_id}, {"_id": 0})
             mongodb_connection.close_connection()
             

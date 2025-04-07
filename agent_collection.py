@@ -1,7 +1,7 @@
 from tools.schema_tools import create_schema_tool, update_schema_tool, delete_schema_tool
 from tools.analysis_tools import filter_records_tool, plot_records_tool, retrieve_sample_tool
 from tools.record_tools import create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool
-from tools.context_tools import get_schema_tool, get_user_profile_tool
+from tools.context_tools import get_schema_tool, get_user_profile_tool, get_context_tool
 from tools.research_tools import research_tool
 from tools.user_profile_tool import save_user_profile_tool, get_db_user_profile_tool
 from agents import Agent, ModelSettings
@@ -50,13 +50,11 @@ user_profile_agent = Agent[UserContext](
 
 navigator_agent = Agent[UserContext](
     name="navigator_agent",
-    model='gpt-4o',
+    model=model,
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
     handoffs=[schema_agent, record_agent, analysis_agent],
     tools=[
-        current_time, 
-        get_schema_tool, 
-        get_user_profile_tool,
+        get_context_tool,
         user_profile_agent.as_tool(
             tool_name="user_profile_tool",
             tool_description="Handle with updating the user's information."
