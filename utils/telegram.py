@@ -11,11 +11,13 @@ def send_message(sender_id: int, message: str) -> None:
 
     payload = {
         "chat_id": sender_id,
-        "text": message
+        "text": message,
+        "parse_mode": "Markdown"
     }
     headers = {"Content-Type": "application/json"}
 
     requests.request("POST", url, json=payload, headers=headers)
+
 
 def send_photo(sender_id: int, photo_url: str, caption: str = '') -> None:
 
@@ -23,10 +25,13 @@ def send_photo(sender_id: int, photo_url: str, caption: str = '') -> None:
 
     payload = {
         "chat_id": sender_id,
-        "photo": photo_url,
+        # "photo": photo_url,
         "caption": caption
     }
     
+    with open(f"{sender_id}_image.jpg", "rb") as photo:
+        payload["photo"] = photo
+
     headers = {"Content-Type": "application/json"}
 
     requests.request("POST", url, json=payload, headers=headers)

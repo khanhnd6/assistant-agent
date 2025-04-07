@@ -33,8 +33,6 @@ class MongoDBConnection:
     
     def get_database(self):
         return self.db
-    
-    
 class RedisCache:
     def __init__(self):
         host = os.getenv("REDIS_HOST")

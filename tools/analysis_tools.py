@@ -1,7 +1,7 @@
 from agents import FunctionTool, RunContextWrapper
-from utils.context import UserContext, FilterRecordSchema, PlotRecordsSchema
+from utils.context import UserContext, FilterRecordSchema, PlotRecordsSchema, RetrieveData
 from utils.database import MongoDBConnection
-from utils.date import convert_date
+from utils.date import convert_date, convert_to_local_timezone
 import matplotlib.pyplot as plt
 import json
 
@@ -45,28 +45,44 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
 
         plt.xlabel(x if x else "")
         plt.ylabel(y if y else "")
-        file_name = "image.jpg"
+        file_name = f"{wrapper.context.user_id}_image.jpg"
         plt.savefig(file_name)
         plt.close()
         return 'SUCCESS'
     except Exception as e:
         print('Error', e)
 
-# async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
-#     try:
-#         parsed = FilterRecordSchema.model_validate_json(args)
-#         parsed = parsed.model_dump()
-#         mongodb_connection = MongoDBConnection()
-#         db = mongodb_connection.get_database()
-#         user_collection = db[f'{wrapper.context.user_id}_{parsed["collection"]}']
-#         query = convert_date(json.loads(parsed["pipeline"]))
-#         result = user_collection.aggregate(query)
-#         mongodb_connection.close_connection() 
-#         return str(list(result))
-#     except Exception as e:
-#         return f'Error'
+async def retrieve_sample(wrapper: RunContextWrapper[UserContext], args: str) -> str:
+    try:
+        parsed_data = RetrieveData.model_validate_json(args)
+        parsed_data = parsed_data.model_dump()
+        
+        user_id = wrapper.context.user_id
+        
+        schema_name = parsed_data["schema_name"]
+        
+        query = {
+            "_user_id": user_id,
+            "_schema_name": schema_name
+        }
+        
+        projection = {
+            "_id": 0
+        }
+        
+        mongodb_connection = MongoDBConnection()
+        db = mongodb_connection.get_database()
+        collection = db['RECORDS']
+        
+        records = list(collection.find(query, projection).limit(2))
 
+        mongodb_connection.close_connection()
 
+        records = convert_to_local_timezone(records)
+        
+        return str(records)
+    except Exception as e:
+        return f"Error in retrieving data - {e}"
 
 async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
@@ -118,46 +134,50 @@ async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
         return str(results)
     except Exception as e:
         return f"Error in retrieving data - {e}"
-    
-# filter_records_tool = FunctionTool(
-#     name="filter_records_tool",
-#     description="""
-#         This tool retrieves records from the specified collection based on filter criteria.
-#         It takes a defined pipeline JSON array and a schema name to query the database and return result
-#     """,
-#     params_json_schema=FilterRecordSchema.model_json_schema(),
-#     on_invoke_tool=filter_records,
-# )
 
+
+retrieve_sample_tool = FunctionTool(
+    name="retrieve_record_tool",
+    description="""
+    This tool will return data of target schema and accepts only data structure like this:
+    {
+        "schema_name": "The REAL name of the schema, not `display_name`"
+    }
+    """,
+    params_json_schema=RetrieveData.model_json_schema(),
+    on_invoke_tool=retrieve_sample,
+    strict_json_schema=True
+)
 
 filter_records_tool = FunctionTool(
     name="filter_records_tool",
     description="""
-This tool accepts only data structure like this:
-{
-    "pipeline": "JSON array of object to filterring data",
-    "collection": "The name of schema"
-}
-
-**Note**:
-    - The record data is an object with the structure like this:
+    This tool accepts only data structure like this:
     {
-      "<field1>": "<value1>",
-      "<datetime field2>": <datetime>,
-      "<field3>": <value3>,
-      "<additional field>": <additional value>, // that not in fields of schema
-      "_user_id": "<user id>",
-      "_record_id": "<record id>",
-      "_deleted": False,
-      "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
+        "pipeline": "JSON array of object to filterring data",
+        "collection": "The name of schema"
     }
-    
-    - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
-    - `collection` is REAL schema name.
-    - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
-    - Data is an object based on fields of schema, filter by it based on REAL field name and data type
-    - Notice that if field type is datetime, passing value in ISO formatted string.
-    """,
+
+    **Note**:
+        - The record data is an object with the structure like this:
+        {
+        "<field1>": "<value1>",
+        "<datetime field2>": <datetime>,
+        "<field3>": <value3>,
+        "<additional field>": <additional value>, // that not in fields of schema
+        "_user_id": "<user id>",
+        "_record_id": "<record id>",
+        "_deleted": False,
+        "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
+        }
+        
+        - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
+        - Aggregation could be min, max, mean, groupby, etc,...
+        - `collection` is REAL schema name.
+        - Do NOT filter by `_record_id`, `_user_id`, just only by `_schema_name`, fields of schema, `_deleted` (the flag whether it is deleted or not, if True passing 1 else passing 0), `_send_notification_at` (datetime that record will be reminded to user).
+        - Data is an object based on fields of schema, filter by it based on REAL field name and data type
+        - Notice that if field type is datetime, passing value in ISO formatted string.
+        """,
     params_json_schema=FilterRecordSchema.model_json_schema(),
     on_invoke_tool=filter_records,
 )
@@ -165,8 +185,26 @@ This tool accepts only data structure like this:
 plot_records_tool = FunctionTool(
     name="plot_records_tool",
     description="""
-        Generates various types of charts (line, scatter, bar, histogram, box) from input data.
-        It returns a file path to the generated chart image.
+    Generates various types of charts (line, scatter, bar, histogram, box) from the data provided, \
+    utilizing the result of a previous call to filter_records_tool. Based on the chart type specified, \
+    it determines the necessary components such as x, y, and hue. If a specific chart type does not \
+    require certain fields (like hue for a line or bar chart), they will be omitted. 
+
+    Parameters:
+    - records: JSON array of object
+    Example: 
+    [
+        { "ticker": "AAPL", "price": 175, "volume": 10000 },
+        { "ticker": "GOOGL", "price": 2800, "volume": 5000 },
+        { "ticker": "MSFT", "price": 310, "volume": 8000 }
+    ]
+    - x: The column selected as the X-axis (e.g., ticker).
+    - y: The column selected as the Y-axis (e.g., price).
+    - chart_type: The type of chart to be drawn. Possible values: "line", "scatter", "bar", "hist", "box".
+    - hue: An optional column used to group data by color, typically for categorical data \
+        (e.g., ticker for distinguishing between different companies).
+    
+    The function returns the file path to the generated chart image.
     """,
     params_json_schema=PlotRecordsSchema.model_json_schema(),
     on_invoke_tool=plot_records,
