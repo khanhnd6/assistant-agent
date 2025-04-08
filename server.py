@@ -41,5 +41,5 @@ async def telegram(request: Request):
         print(f"Error processing request: {str(e)}")
     return {"message": "OK"}, 200
 
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# if __name__ == "__main__":
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
