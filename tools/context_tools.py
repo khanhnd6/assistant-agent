@@ -79,30 +79,3 @@ async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
         }
     except Exception as e:
         return {"error": f"Error happened - {str(e)}"}
-
-@function_tool
-async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
-    """
-    Retrieves the user's schemas and raw profile data from the context.
-    
-    Returns:
-        dict: {
-            "schemas": list[dict],  # List of schema dictionaries
-            "user_profile": dict,   # Raw user profile data
-            "error": str            # Present only if an error occurs
-        }
-    """
-    try:
-        # Fetch schemas (list of schema dicts)
-        schemas = wrapper.context.schemas
-        
-        # Fetch raw user profile (dict)
-        user_profile = wrapper.context.user_profile
-        
-        # Return combined result
-        return {
-            "schemas": schemas,
-            "user_profile": user_profile
-        }
-    except Exception as e:
-        return {"error": f"Error retrieving context: {str(e)}"}
