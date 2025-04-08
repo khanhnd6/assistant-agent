@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from collections import defaultdict
 import asyncio
 from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -103,8 +103,8 @@ async def send_notifications():
     except Exception as e:
         logging.error(f"== Error happened: {str(e)} ==")
     
-async def start_scheduler():
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_notifications, IntervalTrigger(minutes=5))
+def start_scheduler():
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(send_notifications, IntervalTrigger(minutes=5, start_date=datetime.now(timezone.utc)))
     scheduler.start()
     return scheduler

@@ -1,13 +1,19 @@
 from fastapi import FastAPI, Request, HTTPException
 import uvicorn
-import asyncio
+from contextlib import asynccontextmanager
 import os
 from chat import chat
 from utils.telegram import send_message, send_photo
 from scheduler import start_scheduler
 
 app = FastAPI()
-scheduler = None
+scheduler = start_scheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    scheduler.shutdown()
+
 
 @app.get("/")
 async def home():
@@ -34,21 +40,6 @@ async def telegram(request: Request):
     except Exception as e:
         print(f"Error processing request: {str(e)}")
     return {"message": "OK"}, 200
-
-async def startup_event():
-    global scheduler
-    scheduler = await start_scheduler()
-    print("Scheduler started")
-
-@app.on_event("startup")
-async def startup():
-    asyncio.create_task(startup_event())
-
-@app.on_event("shutdown")
-async def shutdown():
-    if scheduler:
-        scheduler.shutdown()
-        print("Scheduler stopped")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
