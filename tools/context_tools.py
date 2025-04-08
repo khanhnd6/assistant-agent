@@ -45,20 +45,29 @@ async def get_user_profile_tool(wrapper: RunContextWrapper[UserContext]) -> str:
 @function_tool
 async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
     try:
-        
         print(wrapper.context)
-        
-        schemas = wrapper.context.schemas if wrapper.context and wrapper.context.schemas else []
 
-        user_data = wrapper.context.user_profile
+        schemas = getattr(wrapper.context, 'schemas', []) or []
+
+        user_data = getattr(wrapper.context, 'user_profile', {}) or {}
 
         dob_str = user_data.get("dob") or "Not specified"
-        
-        interests = user_data.get("interests") or []
-        interests_str = ", ".join(interests) if isinstance(interests, list) else str(interests)
 
-        instructions = user_data.get("instructions") or []
-        instructions_str = ", ".join(instructions) if isinstance(instructions, list) else str(instructions)
+        interests = user_data.get("interests")
+        if isinstance(interests, list):
+            interests_str = ", ".join(interests)
+        elif interests:
+            interests_str = str(interests)
+        else:
+            interests_str = "No interests specified"
+
+        instructions = user_data.get("instructions")
+        if isinstance(instructions, list):
+            instructions_str = ", ".join(instructions)
+        elif instructions:
+            instructions_str = str(instructions)
+        else:
+            instructions_str = "No instructions specified"
 
         user_profile = USER_PROFILE_TEMPLATE.format(
             user_name=user_data.get("user_name", "Unknown"),
@@ -69,13 +78,13 @@ async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
         )
 
         local_tz = get_localzone()
-        utc_tz = pytz.UTC
-        now = datetime.now(utc_tz).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+        now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
 
         return {
             "schemas": schemas,
             "user_profile": user_profile,
             "current_time": now
         }
+
     except Exception as e:
         return {"error": f"Error happened - {str(e)}"}
