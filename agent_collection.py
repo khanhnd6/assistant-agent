@@ -34,6 +34,14 @@ analysis_agent = Agent[UserContext](
     model_settings=ModelSettings(parallel_tool_calls=True)
 )
 
+research_agent = Agent[UserContext](
+    name="research_agent",
+    model=model,
+    instructions=RESEARCH_AGENT_INSTRUCTION,
+    tools=[current_time, research_tool],
+    model_settings=ModelSettings(parallel_tool_calls=True)
+)
+
 user_profile_agent = Agent[UserContext](
     name="user_profile_agent",
     model=model,
@@ -52,7 +60,7 @@ navigator_agent = Agent[UserContext](
     name="navigator_agent",
     model=model,
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
-    handoffs=[schema_agent, record_agent, analysis_agent],
+    handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
     tools=[
         get_context_tool,
         user_profile_agent.as_tool(

@@ -135,9 +135,8 @@ async def filter_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
     except Exception as e:
         return f"Error in retrieving data - {e}"
 
-
 retrieve_sample_tool = FunctionTool(
-    name="retrieve_record_tool",
+    name="retrieve_sample_tool",
     description="""
     This tool will return data of target schema and accepts only data structure like this:
     {
@@ -170,7 +169,7 @@ filter_records_tool = FunctionTool(
         "_deleted": False,
         "_send_notification_at": <datetime> // datetime or null if the record is no need to send notification to user
         }
-        
+        - NEVER use \\ or \ in your QUERY, VARIABLES, VALUES
         - Based on data structure like that, this tool's is used to query data from MongoDB, it accepts `pipeline` to retrieve data, aggregation,...
         - Aggregation could be min, max, mean, groupby, etc,...
         - `collection` is REAL schema name.

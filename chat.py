@@ -7,8 +7,8 @@ import asyncio
 import json
 import os
 import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
 load_dotenv()
 # set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
@@ -48,14 +48,14 @@ async def chat(message: str, user_id: str):
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
         return result.final_output
     except Exception as ex:
-        logger.error(f"Error in chat: {str(ex)}")
+        # logger.error(f"Error in chat: {str(ex)}")
         return "Error happened, please try again!"
 
-# while True:
-#     message = input("Nhập câu hỏi: ")
-#     if message == "q": 
-#         os.system("cls")
-#         break
-#     response = asyncio.run(chat(message, 'khanh2'))
-#     print(response)
+while True:
+    message = input("Nhập câu hỏi: ")
+    if message == "q": 
+        os.system("cls")
+        break
+    response = asyncio.run(chat(message, 'khanh2'))
+    print(response)
 
