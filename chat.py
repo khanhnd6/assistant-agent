@@ -77,6 +77,6 @@ async def chat(message: str, user_id: str):
 #     if message == "q": 
 #         os.system("cls")
 #         break
-#     response = asyncio.run(chat(message, 'khanh123'))
+#     response = asyncio.run(chat(message, 'khanh'))
 #     print(response)
 

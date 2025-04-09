@@ -276,7 +276,7 @@ async def update_record(wrapper: RunContextWrapper[UserContext], args: str) -> s
         db = mongodb_connection.get_database()
         collection = db['RECORDS']
         
-        result = collection.update_one({ "_record_id": record_id,"_user_id": user_id, "_schema_name": schema_name}, {"$set": data})
+        result = collection.update_one({ "_record_id": record_id, "_user_id": user_id, "_schema_name": schema_name}, {"$set": data})
         
         mongodb_connection.close_connection() 
         
@@ -303,11 +303,15 @@ update_record_tool = FunctionTool(
         Remember that only passing **changed fields**
         
         Notes:
-        `_schema_name`: the REAL name of the schema this record belongs to, not `display_name`.
+        `schema_name`: required, the REAL name of the schema this record belongs to, not `display_name`.
+        
+        "record_id": required
 
-        `_data`: Main changed record data based on schema fields, keys are REAL field name, not `display_name` of the schema
+        `data`: required, Main changed record data based on schema fields, keys are REAL field name, not `display_name` of the schema
 
         `send_notification_at`: Optional. If the user wants a reminder, otherwise leave it empty or null.
+        
+        `deleted`: required, "The flag to indicate whether the data is deleted or not, passing 1 if True, else passing 0"
         
         Reflect carefully to fill the data
     """,

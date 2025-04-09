@@ -65,7 +65,7 @@ navigator_agent = Agent[UserContext](
         - schema_agent: For schema tasks.
         - record_agent: For record tasks (including multiple records).
         - analysis_agent: For analysis and research tasks.
+        - research_agent: searches for external information and gives suggestions
         Do NOT call sub-agent tools. Delegate only.
-    """,
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.6)    
+    """,    
 )

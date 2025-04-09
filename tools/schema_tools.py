@@ -110,7 +110,7 @@ delete_schema_tool = FunctionTool(
     name="delete_schema_tool",
     description="""
         This tool deletes a schema from the database collection.
-        It requires a name of that schema which want to delete.
+        It requires an unique name of that schema which want to delete.
         This tool is only invoked when executing the `delete` action for schema management.
         Deletion must be confirmed by the user before execution.
     """,
