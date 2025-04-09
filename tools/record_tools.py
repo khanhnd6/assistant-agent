@@ -189,7 +189,7 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
         return f"Error in retrieving data - {e}"
 
 retrieve_records_tool = FunctionTool(
-    name="retrieve_record_tool",
+    name="retrieve_records_tool",
     description="""
 This tool will return data of target schema and accepts only data structure like this:
 {

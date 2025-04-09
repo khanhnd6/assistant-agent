@@ -1,8 +1,8 @@
 from agents import RunContextWrapper, function_tool
 from utils.context import UserContext
-import pytz
-from tzlocal import get_localzone
-from datetime import datetime
+# import pytz
+# from tzlocal import get_localzone
+# from datetime import datetime
 
 
 USER_PROFILE_TEMPLATE = """
@@ -42,14 +42,14 @@ async def get_user_profile_tool(wrapper: RunContextWrapper[UserContext]) -> str:
 
 
 
-@function_tool
-async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
+# @function_tool
+def get_context_tool(wrapper: UserContext) -> dict:
     try:
-        print(wrapper.context)
+        print(wrapper)
 
-        schemas = getattr(wrapper.context, 'schemas', []) or []
+        schemas = getattr(wrapper, 'schemas', []) or []
 
-        user_data = getattr(wrapper.context, 'user_profile', {}) or {}
+        user_data = getattr(wrapper, 'user_profile', {}) or {}
 
         dob_str = user_data.get("dob") or "Not specified"
 
@@ -77,13 +77,13 @@ async def get_context_tool(wrapper: RunContextWrapper[UserContext]) -> dict:
             instructions_str=instructions_str
         )
 
-        local_tz = get_localzone()
-        now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+        # local_tz = get_localzone()
+        # now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
 
         return {
-            "schemas": schemas,
+            "schemas": schemas if len(schemas) > 0 else "Not existed schemas",
             "user_profile": user_profile,
-            "current_time": now
+            # "current_time": now
         }
 
     except Exception as e:

@@ -49,20 +49,12 @@ user_profile_agent = Agent[UserContext](
     tools=[save_user_profile_tool, get_db_user_profile_tool]
 )
 
-user_profile_agent = Agent[UserContext](
-    name="user_profile_agent",
-    model=model,
-    instructions=USER_PROFILE_AGENT_INSTRUCTION,
-    tools=[save_user_profile_tool, get_db_user_profile_tool]
-)
-
 navigator_agent = Agent[UserContext](
     name="navigator_agent",
     model=model,
     instructions=NAVIGATOR_AGENT_INSTRUCTION,
     handoffs=[schema_agent, record_agent, analysis_agent, research_agent],
     tools=[
-        get_context_tool,
         user_profile_agent.as_tool(
             tool_name="user_profile_tool",
             tool_description="Handle with updating the user's information."
