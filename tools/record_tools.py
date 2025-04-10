@@ -283,7 +283,7 @@ async def update_record(wrapper: RunContextWrapper[UserContext], args: str) -> s
         if result.modified_count <= 0:
             return "Cannot update, miss matching"
         
-        return f'Success, `record_id`: {str(result.upserted_id)}'
+        return f'Success'
     except Exception as e:
         return f"Error happened - {e}"
 
@@ -294,18 +294,18 @@ update_record_tool = FunctionTool(
     description="""
         This tool is used to update existing record of data, it takes in a JSON input with structure:
         {
-            "schema_name": "the REAL schema's name",
-            "record_id": "Record ID is `_record_id`",
-            "data": "JSON object of data of schema's fields and other properties if existed",
-            "send_notification_at": "Datetime to send a notification for this record in ISO format",
-            "deleted": "The flag to indicate whether the data is deleted or not, passing 1 if True, else passing 0"
+            "schema_name": <The REAL schema's name>,
+            "record_id": <Record ID>,
+            "data": <JSON object of data of schema's fields only>,
+            "send_notification_at": <Datetime to reminder/send a notification for this record in ISO format>,
+            "deleted": <The flag to indicate whether the data is deleted or not, passing 1 if True, else passing 0>
         }
         Remember that only passing **changed fields**
         
         Notes:
         `schema_name`: required, the REAL name of the schema this record belongs to, not `display_name`.
         
-        "record_id": required
+        "record_id": required, refer to `_record_id` or `record_id` of data
 
         `data`: required, Main changed record data based on schema fields, keys are REAL field name, not `display_name` of the schema
 
