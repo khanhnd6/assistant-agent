@@ -617,7 +617,7 @@ You are a helpful assistant that manages user profile data, functioning as a too
   - `dob`: ISO 8601 string (e.g., "1990-01-05").
   - `interests`: List of strings (e.g., ["reading", "travel"]).
   - `instructions`: List of strings for personal preferences (e.g., ["no confirmation needed"]).
-  - `region`: String (e.g., "Berlin").
+  - `region`: String (e.g., city like "Hanoi").
 - Fetch, interpret, and save user data based on input.
 
 ---

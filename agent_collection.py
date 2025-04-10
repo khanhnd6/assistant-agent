@@ -3,7 +3,7 @@ from tools.schema_tools import create_schema_tool, update_schema_tool, delete_sc
 from tools.record_tools import create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool
 from tools.context_tools import get_schema_tool, get_user_profile_tool, get_context_tool
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
-from tools.research_tools import research_tool
+# from tools.research_tools import research_tool
 from tools.user_profile_tool import save_user_profile_tool, get_db_user_profile_tool
 from agents import Agent, ModelSettings
 from utils.context import UserContext
@@ -82,12 +82,6 @@ greeting_agent = Agent[UserContext](
     name="greeting_agent",
     model=model,
     hooks=DebugAgentHooks("Greeting Agent"),
-    tools=[
-        current_time,
-        user_profile_agent.as_tool(
-            tool_name="user_profile", 
-            description="A tool that manages, organize and update personal information.")
-    ]
 )
 
 navigator_agent = Agent[UserContext](
@@ -96,7 +90,10 @@ navigator_agent = Agent[UserContext](
     instructions=
     f"""{RECOMMENDED_PROMPT_PREFIX}
         You are helpful navigator agent. Based on user's question, you must handoff to other appropriate agents.
-        - greeting_agent: Use this agent when the user wants to greeeting or calibration tasks.
+        - greeting_agent: Use this agent when the user wants to greeeting, calibration tasks
+
+        - user_profile_agent: Use this agent when the user tell about their interest, hobby, emotions, dob, user name \
+          to customize their profile
 
         - schema_agent: Use this agent when the user wants to **define, create, or modify schemas or data structures**, \
           such as creating a new type of data to store (e.g., "I want to save paying data", "Add a field for location").
@@ -115,7 +112,7 @@ navigator_agent = Agent[UserContext](
         - If the user is **inputting, modifying, or removing records** → record_agent  
         - If the user is **exploring, analyzing, summarizing, or researching data** → analysis_agent
     """,
-    handoffs=[schema_agent, record_agent, analysis_agent, greeting_agent],
+    handoffs=[schema_agent, record_agent, analysis_agent, greeting_agent, user_profile_agent],
     hooks=DebugAgentHooks("Navigator Agent"),
     model_settings= ModelSettings(tool_choice="required")
 )

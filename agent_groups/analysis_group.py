@@ -6,9 +6,7 @@ from tools.analysis_tools import plot_records_tool
 from utils.database import MongoDBConnection
 from utils.hook import DebugAgentHooks
 from utils.context import UserContext
-from pydantic import BaseModel
-
-model="gpt-3.5-turbo"
+from agent_collection import model
 
 @function_tool
 async def get_all_data(wrapper: RunContextWrapper[UserContext], schema_name: str) -> str:
@@ -22,10 +20,10 @@ research_agent = Agent[UserContext](
     handoff_description="An agent that can search for real-time data, info throught Internet",
     instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
         When you are transferred, do not refuse the task. Use the following routine:
-        1. Call `get_user_profile_tool` to retrieve the user's region, then initialize the search query.
+        1. Call `get_user_profile_tool` only one time to retrieve the user's region, then initialize the search query.
         2. If getting error when calling tool above, initialize seach query based on their language.
-        3. Use the seach tool and produce a concise summary for the result. The summary must 1 paragraph and less then 150 words.
-        4. Capture the main points, write succinctly, no need to have complete sentences or good grammar.
+        3. Use the seach tool and produce a concise summary for the result. The summary must 1 paragraph and less then 100 words.
+        4. Capture the main points, write succinctly, no need to have complete sentences or good grammar, no need to contain url or link.
     """,
     tools=[WebSearchTool(search_context_size="low"), get_user_profile_tool],
     hooks=DebugAgentHooks(display_name="Research Agent"),
@@ -40,7 +38,7 @@ plot_agent = Agent[UserContext](
         2. Prepare the data carefully accroding to `plot_records_tool` input format.
         3. Make sure to verify and preserve the correct numerical scale — e.g., don't confuse 80,000 with 8,000,000.
         4. Respect currency and number formatting based on user's language.
-        5. Call `plot_records_tool` then answer to user.
+        5. Call `plot_records_tool` then return the result.
     """,
     tools=[plot_records_tool],
     hooks=DebugAgentHooks(display_name="Plot Agent"),    
@@ -54,9 +52,10 @@ aggregation_agent = Agent[UserContext](
         1. Call `current_time` with arugment is the region based on user's language to get specific time.
         2. Call `get_schema_tool` to get all schemas, then identify the schema name that best matches the user request.
         3. Pass the schema name to `get_all_data` tool to get all records.
-        4. If you need information from external data or real-time searching, call `search_tool`
-        5. If user want us to visualize data or draw plot, call `plot_tool` with all information you got
-        6. Analysing by yourself then return a response.
+        4. If need information from external data or real-time searching, call `search_tool`
+        5. Automatically convert all of currency data used in user's language.
+        6. If need to visualize data/draw plot, call `plot_tool` with all information you got
+        7. Analysing by yourself then return a response in the same language as input. 
     """,
     tools=[
         get_schema_tool, get_all_data, current_time, 

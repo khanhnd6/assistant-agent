@@ -48,7 +48,7 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
         file_name = f"{wrapper.context.user_id}_image.jpg"
         plt.savefig(file_name)
         plt.close()
-        return 'SUCCESS'
+        return 'Success'
     except Exception as e:
         print('Error', e)
 
