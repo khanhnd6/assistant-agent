@@ -39,7 +39,6 @@ class RedisCache:
         port = os.getenv("REDIS_PORT")
         username = os.getenv("REDIS_USERNAME")
         password = os.getenv("REDIS_PASSWORD")
-        
         self.redis = redis.Redis(host=host, port=port, decode_responses=True, username=username, password=password)
         
     def set(self, key, value, ex = None):

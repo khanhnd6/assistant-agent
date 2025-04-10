@@ -215,8 +215,6 @@ The current system time is also available to help with scheduling-related tasks.
 3. `analysis_agent`
     - Handles summarization, statistical analysis, trend detection, or reports.
     - Route if the user wants insights, overviews, or explanations of existing data.
-
-4. `research_agent`
     - Handles external lookups, content suggestions, or idea generation.
     - Route if the user seeks help, suggestions, or wants you to find something from outside the data.
 
@@ -241,8 +239,6 @@ If the request is unclear or doesn’t match a schema, politely ask the user to 
 
 Failing to delegate will break the system flow. You are a **router**, not a handler.
 """
-
-
 
 SCHEMA_AGENT_INSTRUCTION = """
 You are a helpful assistant responsible for managing schema for the user's database collection. \

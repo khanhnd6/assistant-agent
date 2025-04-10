@@ -45,7 +45,6 @@ async def get_user_profile_tool(wrapper: RunContextWrapper[UserContext]) -> str:
 # @function_tool
 def get_context_tool(wrapper: UserContext) -> dict:
     try:
-        print(wrapper)
 
         schemas = getattr(wrapper, 'schemas', []) or []
 

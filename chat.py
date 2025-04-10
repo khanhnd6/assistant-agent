@@ -6,27 +6,23 @@ from dotenv import load_dotenv
 from tools.context_tools import get_context_tool
 import json
 import os
-import logging
 import asyncio
 
 import pytz
 from tzlocal import get_localzone
 from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 load_dotenv()
 # set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
 REDIS_EXPERATION_IN = 1800 # 30 mins
+r = RedisCache()
 
 async def chat(message: str, user_id: str):
     try:
         conversation = []
         context = None
-        r = RedisCache()
         if user_id:
             mongodb_connection = MongoDBConnection()
             db = mongodb_connection.get_database()
@@ -64,19 +60,18 @@ async def chat(message: str, user_id: str):
             input=conversation,
             context=context)
         conversation = conversation + [result.to_input_list()[-1]]
-        conversation = conversation[-80:]
+        conversation = conversation[-10:]
         
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
         return result.final_output
     except Exception as ex:
-        logger.error(f"Error in chat: {str(ex)}")
-        return "Error happened, please try again!"
+        raise "Error happened, please try again!"
 
-# while True:
-#     message = input("Nhập câu hỏi: ")
-#     if message == "q": 
-#         os.system("cls")
-#         break
-#     response = asyncio.run(chat(message, 'khanh'))
-#     print(response)
+while True:
+    message = input("Nhập câu hỏi: ")
+    if message == "q": 
+        os.system("cls")
+        break
+    response = asyncio.run(chat(message, 'khanh'))
+    print(response)
 
