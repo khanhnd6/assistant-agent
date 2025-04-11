@@ -38,14 +38,14 @@ async def get_user_profile_tool(wrapper: RunContextWrapper[UserContext]) -> str:
         )
         return profile
     except Exception as e:
-        return 'Error'
+        return f'Error: {e}'
 
 
 
 # @function_tool
 def get_context_tool(wrapper: UserContext) -> dict:
     try:
-        print(wrapper)
+        # print(wrapper)
 
         schemas = getattr(wrapper, 'schemas', []) or []
 
@@ -87,4 +87,4 @@ def get_context_tool(wrapper: UserContext) -> dict:
         }
 
     except Exception as e:
-        return {"error": f"Error happened - {str(e)}"}
+        return {"error": f"Error happened - {e}"}
