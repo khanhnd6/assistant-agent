@@ -52,7 +52,7 @@ task_coordinator = Agent[UserContext](
     handoffs = [record_agent, schema_agent],
     tools=[],
     model_settings=ModelSettings(temperature=0.5, tool_choice=None),
-        hooks=DebugAgentHooks("Task Coordinator Agent")
+    hooks=DebugAgentHooks("Task Coordinator Agent")
 )
 
 # analysis_agent = Agent[UserContext](
