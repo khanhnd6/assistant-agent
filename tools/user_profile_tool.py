@@ -5,15 +5,10 @@ from utils.date import convert_date
 from utils.database import MongoDBConnection
 
 @function_tool
-def get_db_user_profile_tool(wrapper: RunContextWrapper[UserContext]) -> str:
+def get_user_profile_from_context_tool(wrapper: RunContextWrapper[UserContext]) -> str:
     connection = MongoDBConnection()
-    db = connection.get_database()
     
-    user_id = wrapper.context.user_id
-    
-    user_profile_data = db["USER_PROFILES"].find_one({"user_id": user_id})
-    
-    connection.close_connection()
+    user_profile_data = wrapper.context.user_profile
     
     if user_profile_data:
         return str(user_profile_data)
@@ -56,8 +51,9 @@ save_user_profile_tool = FunctionTool(
             "user_name": "User name",
             "dob": "Date of birth in ISO formatted string",
             "interests": "list of string for interests",
-            "instructions": "list of string for Instructions for personal direction",
             "region": "Current user's region in string",
+            "styles": "list of strings for user styles",
+            "instructions": "list of string for Instructions for personal direction",
         }
         
     """,

@@ -26,7 +26,7 @@ async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
         
         return 'Success'
     except Exception as e:
-        return 'Error'
+        return f'Error {str(e)}'
     
 async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
@@ -77,7 +77,7 @@ create_schema_tool = FunctionTool(
             "display_name": "Human-readable name",  # e.g., 'Todo List'
             "description": "Purpose of the schema",
             "fields": [
-                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
+                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|bool"}
             ]
         }
         This tool is only invoked when executing the `create` action for schema management.
@@ -96,7 +96,7 @@ update_schema_tool = FunctionTool(
             "display_name": This value must remain unchanged,
             "description": "This value must remain unchanged,
             "fields": [
-                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|boolean"}
+                {"name": "field_name", "display_name": "Human-readable name", "description": "Field purpose", "data_type": "string|integer|datetime|bool"}
             ]
         }
         Only `fields` should be updated while `name` and `description` remain unchanged

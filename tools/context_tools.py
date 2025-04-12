@@ -1,8 +1,6 @@
 from agents import RunContextWrapper, function_tool
 from utils.context import UserContext
-# import pytz
-# from tzlocal import get_localzone
-# from datetime import datetime
+
 
 
 USER_PROFILE_TEMPLATE = """
@@ -77,14 +75,11 @@ def get_context_tool(wrapper: UserContext) -> dict:
             instructions_str=instructions_str
         )
 
-        # local_tz = get_localzone()
-        # now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
-
         return {
             "schemas": schemas if len(schemas) > 0 else "Not existed schemas",
             "user_profile": user_profile,
-            # "current_time": now
         }
 
     except Exception as e:
         return {"error": f"Error happened - {e}"}
+    

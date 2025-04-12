@@ -2,6 +2,7 @@ from agents import FunctionTool, RunContextWrapper
 from utils.database import MongoDBConnection
 from utils.context import UserContext, DataEntry, DeleteRecord, RetrieveData
 from utils.date import convert_date, convert_to_local_timezone
+from utils.data_extensions import remove_first_underscore, remove_empty_values
 import json
 import uuid
 
@@ -167,11 +168,14 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
         
         query = {
             "_user_id": user_id,
-            "_schema_name": schema_name
+            "_schema_name": schema_name,
+            "_deleted": False
         }
         
         projection = {
-            "_id": 0
+            "_id": 0,
+            "_user_id": 0,
+            "_deleted": 0
         }
         
         mongodb_connection = MongoDBConnection()
@@ -184,7 +188,11 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
 
         records = convert_to_local_timezone(records)
         
-        return str(records)
+        records = remove_first_underscore(records)
+        
+        records = remove_empty_values(records)
+        
+        return str(records) if records else "Not found any data"
     except Exception as e:
         return f"Error in retrieving data - {e}"
 
@@ -197,8 +205,7 @@ This tool will return data of target schema and accepts only data structure like
 }
 """,
     params_json_schema=RetrieveData.model_json_schema(),
-    on_invoke_tool=retrieve_records,
-    strict_json_schema=True
+    on_invoke_tool=retrieve_records
 )
 
 
@@ -281,7 +288,7 @@ async def update_record(wrapper: RunContextWrapper[UserContext], args: str) -> s
         mongodb_connection.close_connection() 
         
         if result.modified_count <= 0:
-            return "Cannot update, miss matching"
+            return "No data is modified"
         
         return f'Success'
     except Exception as e:
@@ -314,6 +321,7 @@ update_record_tool = FunctionTool(
         `deleted`: required, "The flag to indicate whether the data is deleted or not, passing 1 if True, else passing 0"
         
         Reflect carefully to fill the data
+        Do NOT store duplicated data.
     """,
     params_json_schema=DataEntry.model_json_schema(),
     on_invoke_tool=update_record,

@@ -59,9 +59,28 @@ class UserProfile(BaseSchema):
     user_id: Optional[str] = Field(default_factory=None, exclude=True, description="User Id")
     user_name: Optional[str] = Field(default_factory=None, description="User name")
     dob: Optional[str] = Field(default_factory=None, description="Date of birth in ISO formatted string")
+    region: Optional[str] = Field(default_factory=None, description="Current user's region")
+    styles: Optional[str] = Field(default_factory=None, description="Styles")
     interests: Optional[List[str]] = Field(default_factory=None, description="Interests")
     instructions: Optional[List[str]] = Field(default_factory=None, description="Instructions for personal direction")
-    region: Optional[str] = Field(default_factory=None, description="Current user's region")
+
+class UserProfileOutput(BaseSchema):
+    status: Literal["Success", "Error", "Fail"]
+    # message: str
+    call_again: bool
+
+
+class RecordCommand(BaseSchema):
+    schema_name: str
+    action: Literal["create", "update", "delete", None]
+    existed: bool
+    confirmed: bool
+    command: str
+
+class RecordCommands(BaseSchema):
+    commands: list[RecordCommand]
+
+    
 
 # Đối tượng ngữ cảnh của mỗi người dùng
 # Người dùng bao gồm id và danh sách các collection đã tạo
