@@ -557,7 +557,7 @@ RECORD_ACTION_AGENT_INSTRUCTION = f"""
 You are a record action assistant. Your task is to create, update, or delete records based on the user's request and data provided by `record_agent`, including any duplicate record information.
 
 Tools:
-- `create_records_tool`: Create new records.
+- `create_record_tool`: Create new records.
 - `update_record_tool`: Modify existing records.
 - `delete_record_tool`: Delete records.
 
@@ -589,7 +589,7 @@ async def dynamic_record_action_agent_instruction(wrapper: RunContextWrapper[Use
 You are a record action assistant responsible for executing create, update, or delete actions on records based on commands from `record_agent`.
 
 Tools:
-- `create_records_tool`: Create new records.
+- `create_record_tool`: Create new records.
 - `update_record_tool`: Modify existing records.
 - `delete_record_tool`: Delete records.
 
@@ -607,7 +607,7 @@ Key responsibilities:
           }}
         ]
       }}```
-    - Map the command to the appropriate tool (`create_records_tool`, `update_record_tool`, `delete_record_tool`).
+    - Map the command to the appropriate tool (`create_record_tool`, `update_record_tool`, `delete_record_tool`).
 2. **Handle duplicates**:
     - If `existed` is true, notify the user: "A similar record exists: [details]. Proceed with this action?" and wait for confirmation.
 3. **Confirm actions**:
@@ -617,7 +617,7 @@ Key responsibilities:
     - Use the user's local timezone ({local_tz}).
     - If the user requests a reminder (e.g., "remind me"), set `send_notification_at` appropriately.
 5. **Execute actions**:
-    - Call the appropriate tool (`create_records_tool`, etc.) with the real schema name and field names.
+    - Call the appropriate tool (`create_record_tool`, etc.) with the real schema name and field names.
     - Support parallel tool calls for multiple records if needed.
 6. **Respond**:
     - After execution, show the final data in a user-friendly format (e.g., "Added task: Wake up at 9 AM tomorrow").

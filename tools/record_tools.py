@@ -36,7 +36,7 @@ async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
     except Exception as e:
         return f'Error {str(e)}'
     
-create_records_tool = FunctionTool(
+create_record_tool = FunctionTool(
     name="create_record_tool",
     description="""
         This tool creates a new record in the specified collection. Call this tool once for each different item

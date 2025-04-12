@@ -1,6 +1,6 @@
 from tools.schema_tools import create_schema_tool, update_schema_tool, delete_schema_tool
 from tools.analysis_tools import filter_records_tool, plot_records_tool, retrieve_sample_tool
-from tools.record_tools import create_records_tool, retrieve_records_tool, delete_record_tool, update_record_tool
+from tools.record_tools import create_record_tool, retrieve_records_tool, delete_record_tool, update_record_tool
 from tools.context_tools import get_schema_tool
 from agent_groups.analysis_group import analysis_agent
 from tools.research_tools import research_tool
@@ -26,7 +26,7 @@ record_action_agent = Agent[UserContext](
     name="record_action_agent",
     model=model,
     instructions=dynamic_record_action_agent_instruction,
-    tools=[create_records_tool, delete_record_tool, update_record_tool],
+    tools=[create_record_tool, delete_record_tool, update_record_tool],
     model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.2),
     hooks=DebugAgentHooks("Record Action Agent"),
 )
