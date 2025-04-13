@@ -6,8 +6,7 @@ from utils.date import convert_to_local_timezone
 from utils.database import MongoDBConnection
 from utils.context import UserContext
 import matplotlib.pyplot as plt
-import random
-import json
+import ujson as json
 
 async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:

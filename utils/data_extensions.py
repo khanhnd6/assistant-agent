@@ -1,4 +1,4 @@
-import json
+import ujson as json
 
 def remove_first_underscore(obj):
     if isinstance(obj, dict):

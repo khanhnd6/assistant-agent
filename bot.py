@@ -10,7 +10,7 @@ async def handle_message(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     message = update.message.text
     response = await chat(message, user_id)
-    await update.message.reply_text(str(response), parse_mode='markdown')
+    await update.message.reply_text(str(response))
 
     photo_path = f"{user_id}_image.jpg"
     if os.path.exists(photo_path):  

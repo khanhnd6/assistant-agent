@@ -3,7 +3,7 @@ from utils.database import MongoDBConnection
 from utils.context import UserContext, DataEntry, DeleteRecord, RetrieveData
 from utils.date import convert_date, convert_to_local_timezone
 from utils.data_extensions import remove_first_underscore, remove_empty_values
-import json
+import ujson as json
 import uuid
 
 async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:

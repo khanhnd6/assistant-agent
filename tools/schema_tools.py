@@ -1,7 +1,7 @@
 from agents import FunctionTool, RunContextWrapper
 from utils.context import CollectionSchema, UserContext
 from utils.database import MongoDBConnection
-import json
+import ujson as json
 
 async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
