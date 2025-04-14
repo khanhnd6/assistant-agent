@@ -6,7 +6,7 @@ import redis
 load_dotenv()
 
 class MongoDBConnection:
-    def __init__(self):
+    def __init__(self, silent=False):
         self.connection_string = os.getenv("MONGODB_CONN")
         self.database_name = os.getenv("MONGODB_DATABASE")
         
@@ -19,7 +19,7 @@ class MongoDBConnection:
             self.client = MongoClient(self.connection_string)
             self.db = self.client[self.database_name]
             self.client.server_info()
-            print("MongoDB connected successfully")
+            if not silent: print("MongoDB connected successfully")
         except Exception as e:
             print(f"Failed to connect to MongoDB: {e}")
             raise
