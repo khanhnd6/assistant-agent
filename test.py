@@ -65,6 +65,6 @@ if __name__ == "__main__":
     app = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()
     app.add_handler(MessageHandler(filters.TEXT, handle_message))
     app.job_queue.run_repeating(auto_message, interval=SCHEDULER)
-    print(f"🤖 Bot đang chạy và sẽ gửi tin nhắn tự động mỗi {SCHEDULER} giây")
+    print(f"🤖 Bot đang chạy và sẽ kiểm tra thông báo mỗi {SCHEDULER} giây")
     app.run_polling()
 
