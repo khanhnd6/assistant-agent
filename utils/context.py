@@ -48,7 +48,7 @@ class FieldSchema(BaseSchema):
 
 # Đối tượng đại diện cho schema của 1 bảng/collection
 class CollectionSchema(BaseSchema):
-    user_id: Optional[str] = Field(description="User Id", default_factory=None)
+    user_id: Optional[int] = Field(description="User Id", default_factory=None)
     name: str = Field(description="Unique schema name, no spaces or special characters")
     display_name: str = Field(description="Human-readable schema name")
     description: str = Field(description="Schema description")
@@ -56,12 +56,13 @@ class CollectionSchema(BaseSchema):
     deleted: bool = Field(description="Flag to determine whether this schema is deleted or not", default_factory=False)
     
 class UserProfile(BaseSchema):
-    user_id: Optional[str] = Field(default_factory=None, exclude=True, description="User Id")
+    user_id: Optional[int] = Field(default_factory=None, exclude=True, description="User Id")
     user_name: Optional[str] = Field(default_factory=None, description="User name")
     dob: Optional[str] = Field(default_factory=None, description="Date of birth in ISO formatted string")
     region: Optional[str] = Field(default_factory=None, description="Current user's region")
     styles: Optional[str] = Field(default_factory=None, description="Styles")
     interests: Optional[List[str]] = Field(default_factory=None, description="Interests")
+    timezone: Optional[str] = Field(default_factory="", description="User location timezone")
     instructions: Optional[List[str]] = Field(default_factory=None, description="Instructions for personal direction")
 
 class UserProfileOutput(BaseSchema):
@@ -86,7 +87,7 @@ class RecordCommands(BaseSchema):
 # Người dùng bao gồm id và danh sách các collection đã tạo
 @dataclass
 class UserContext:
-    user_id: str
+    user_id: int
     schemas: List[CollectionSchema] = field(default_factory=list)
     user_profile: UserProfile = field(default=None)
 

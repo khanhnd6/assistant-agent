@@ -1,6 +1,7 @@
 from agents import RunContextWrapper, FunctionTool, function_tool
 from utils.context import UserContext, UserProfile
 from utils.date import convert_date
+import pytz
 
 from utils.database import MongoDBConnection
 
@@ -21,9 +22,12 @@ async def save_user_profile(wrapper: RunContextWrapper[UserContext], args: str) 
         parsed_obj = parsed.model_dump()
         
         parsed_obj = convert_date(parsed_obj)
-        
-        print(parsed_obj)
-        
+
+        timezone = parsed_obj.get("timezone", "")
+        if timezone:
+            if timezone not in pytz.all_timezones:
+                return f"❗ Invalid timezone: '{timezone}' — must be a valid IANA timezone name (e.g., 'Asia/Ho_Chi_Minh')."
+
         user_id = wrapper.context.user_id
         
         parsed_obj["user_id"] = user_id
@@ -53,6 +57,7 @@ save_user_profile_tool = FunctionTool(
             "interests": "list of string for interests",
             "region": "Current user's region in string",
             "styles": "list of strings for user styles",
+            "timezone": "User location timezone",
             "instructions": "list of string for Instructions for personal direction",
         }
         

@@ -22,7 +22,7 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
 REDIS_EXPERATION_IN = 1800 # 30 mins
 
-async def chat(message: str, user_id: str):
+async def chat(message: str, user_id: int):
     try:
         conversation = []
         context = None
@@ -30,8 +30,9 @@ async def chat(message: str, user_id: str):
         if user_id:
             mongodb_connection = MongoDBConnection()
             db = mongodb_connection.get_database()
-            db_schemas = db["SCHEMAS"].find({"user_id": user_id, "deleted": False}, {"_id": 0})
+            db_schemas = list(db["SCHEMAS"].find({"user_id": user_id, "deleted": False}, {"_id": 0}))
             db_user_profile = db["USER_PROFILES"].find_one({"user_id": user_id}, {"_id": 0})
+            
             mongodb_connection.close_connection()
             
             context = UserContext(user_id = user_id, schemas=[schema for schema in db_schemas], user_profile=db_user_profile)
@@ -73,11 +74,11 @@ async def chat(message: str, user_id: str):
         print(f"Error in chat: {str(ex)}")
         return "Error happened, please try again!"
 
-while True:
-    message = input("Nhập câu hỏi: ")
-    if message == "q": 
-        os.system("cls")
-        break
-    response = asyncio.run(chat(message, 'khanh'))
-    print(response)
+# while True:
+#     message = input("Nhập câu hỏi: ")
+#     if message == "q": 
+#         os.system("cls")
+#         break
+#     response = asyncio.run(chat(message, 'khanh'))
+#     print(response)
 

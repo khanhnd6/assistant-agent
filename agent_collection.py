@@ -122,20 +122,7 @@ navigator_agent = Agent[UserContext](
 
 pre_process_agent = Agent[UserContext](
     name="pre_process_agent",
-    instructions=f"""
-    {RECOMMENDED_PROMPT_PREFIX}
-    You are helpful agent to navigate task and save user information
-    
-    Handoff rules:
-    - `greeting_agent`: just greeting
-    - `navigator_agent`: handle with other like actions, tasks, data structures, analysing, researching and so on.
-    
-    Tool usage: 
-    - `user_profile_tool`: to save personal information like: user name, date of birth, region, styles, interests and instructions only
-    
-    If both tool and handoff task are needed to call, call tool first, receive a response and handoff the request to possible agent
-    
-    """,
+    instructions=dynamic_pre_process_instruction,
     handoffs=[navigator_agent, greeting_agent],
     tools=[user_profile_agent.as_tool(
             tool_name="user_profile_tool",

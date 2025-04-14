@@ -6,6 +6,8 @@ import pytz
 from tzlocal import get_localzone
 from datetime import datetime
 
+from utils.date import current_time_v2
+
 
 # NAVIGATOR_AGENT_INSTRUCTION_V2 = f"""
 #   {RECOMMENDED_PROMPT_PREFIX}
@@ -33,11 +35,41 @@ from datetime import datetime
 #   - If the user is **exploring, analyzing, summarizing, or researching data** → analysis_agent
 # """
 
+
+def dynamic_pre_process_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
+  schemas = wrapper.context.schemas or "Empty"
+  user_profile = wrapper.context.user_profile or "Empty"
+  local_tz=user_profile.get("timezone")
+  now = current_time_v2(local_tz)
+  return """
+    {RECOMMENDED_PROMPT_PREFIX}
+    You are helpful agent to navigate task and save user information
+    
+    Handoff rules:
+    - `greeting_agent`: just greeting
+    - `navigator_agent`: handle with other like actions, tasks, data structures, analysing, researching and so on.
+    
+    Tool usage: 
+    - `user_profile_tool`: to save personal information like: user name, date of birth, region, styles, interests and instructions only
+    
+    If both tool and handoff task are needed to call, call tool first, receive a response and handoff the request to possible agent
+    
+    For time-based requests, ensure the time is interpreted in the user's local timezone ({local_tz}).
+
+    Context information:
+    - Defined schemas: {schemas}
+    - Current time(ISO format): {current_time}
+    """.format(
+      RECOMMENDED_PROMPT_PREFIX=RECOMMENDED_PROMPT_PREFIX,
+      schemas=schemas,
+      local_tz=local_tz,
+      current_time=now)
+
 def dynamic_greeting_agent_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
   schemas = wrapper.context.schemas or "Empty"
   user_profile = wrapper.context.user_profile or "Empty"
-  local_tz = get_localzone()
-  now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+  now = current_time_v2(user_profile.get("timezone"))
+  
   return """
   {RECOMMENDED_PROMPT_PREFIX}
   You are helpful AI assistant to greeting user
@@ -76,8 +108,8 @@ NAVIGATOR_AGENT_INSTRUCTION = """
 def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
   schemas = wrapper.context.schemas or "Empty"  
   user_profile = wrapper.context.user_profile or "Empty"
-  local_tz = get_localzone()
-  now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+  now = current_time_v2(user_profile.get("timezone"))
+  
   return """
   {RECOMMENDED_PROMPT_PREFIX}
   You are helpful navigator agent. Based on user's question and context information, you must handoff to other appropriate agents.
@@ -102,12 +134,13 @@ def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserContext],
 def dynamic_task_coordinator_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
 
   schemas = wrapper.context.schemas or "Empty"  
-  local_tz = get_localzone()
-  now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+  user_profile = wrapper.context.user_profile or "Empty"
+
+  now = current_time_v2(user_profile.get("timezone"))
 
   return """
 {RECOMMENDED_PROMPT_PREFIX}
-You are a helpful task coordinator responsible for delegating user requests to the appropriate agent based on intent and context. Your goal is to ensure every request is handled correctly, whether it involves schemas, records, or other data-related tasks.
+You are a helpful task coordinator responsible for delegating user requests to the appropriate agent based on intent and context. Your goal is to ensure every request is handled correctly, whether it involves schemas, records, or other data-related tasks. You must to carefully reflect the input to what user intents.
 
 Handoff rules:
 - `schema_agent`: Delegate requests related to creating, updating, or deleting schemas, data structures, or fields. Examples:
@@ -122,15 +155,15 @@ Handoff rules:
 
 Decision logic:
 1. Analyze the user input to determine intent:
-    - If the request mentions creating or modifying data structures (e.g., "new type", "add field", "change structure"), delegate to `schema_agent`.
+    - If the request mentions creating or modifying data structures (e.g., "new type", "add field", "change structure", "type of jobs"), delegate to `schema_agent`.
     - If the request involves manipulating data (e.g., "add", "update", "delete", "list", "task", "schedule", "track", "log", or time-based terms like "at 9", "tomorrow"), delegate to `record_agent`.
-    - Keywords to detect record-related requests: "add", "put", "insert", "update", "change", "delete", "remove", "list", "todolist", "task", "schedule", "event", "remind", "track", "log", "record", "at [time]", "on [date]", "tomorrow", "next week".
 2. Check available schemas in the context:
     - If a relevant schema exists (based on keywords or context), proceed with `record_agent`.
-    - If no relevant schema exists, inform the user: "I couldn't find a suitable schema for this request. Would you like to create one?" and delegate to `schema_agent` for schema creation.
+    - If no relevant schema exists, inform the user, e.g: "I couldn't find a suitable schema for this request. Would you like to create one?" and delegate to `schema_agent` for schema creation.
 3. Handle ambiguous requests:
     - If the intent is unclear, assume it's a record-related task and delegate to `record_agent`, unless schema creation is explicitly mentioned.
     - Avoid making assumptions about tools; only use handoffs.
+    - If something you are not sure, ask user again to get more information.
 
 Notes:
 - Do NOT attempt to call `record_agent` or `schema_agent` as tools. They are handoff targets only.
@@ -143,7 +176,7 @@ Context information:
       """.format(
         RECOMMENDED_PROMPT_PREFIX = RECOMMENDED_PROMPT_PREFIX, 
         schemas=schemas,
-        local_tz = str(local_tz), 
+        local_tz = str(user_profile.get("timezone")), 
         current_time=now)
 
 # NAVIGATOR_AGENT_INSTRUCTION = """
@@ -505,8 +538,7 @@ async def dynamic_record_agent_instruction(wrapper: RunContextWrapper[UserContex
 
   schemas = wrapper.context.schemas or "Empty"
   user_profile = wrapper.context.user_profile or "Empty"  
-  local_tz = get_localzone()
-  now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+  now = current_time_v2(user_profile.get("timezone"))
   return """
 {RECOMMENDED_PROMPT_PREFIX}
 You are a helpful record commander. Your task is to retrieve records using `retrieve_records_tool` and determine if user input is a duplicate or new command. You just do handoff once only with commands for diffent records each one.
@@ -581,8 +613,7 @@ async def dynamic_record_action_agent_instruction(wrapper: RunContextWrapper[Use
 
   schemas = wrapper.context.schemas or "Empty"
   user_profile = wrapper.context.user_profile or "Empty"  
-  local_tz = get_localzone()
-  now = datetime.now(pytz.UTC).astimezone(local_tz).strftime("%Y-%m-%d %H:%M:%S %z")
+  now = current_time_v2(user_profile.get("timezone"))
 
   return """
 {RECOMMENDED_PROMPT_PREFIX}
@@ -639,7 +670,7 @@ Context information:
   schemas=schemas, 
   user_profile=user_profile, 
   current_time=now,
-  local_tz=str(local_tz))
+  local_tz=str(user_profile.get("timezone")))
 
 
 
@@ -811,35 +842,45 @@ IF USER ASKS FOR REAL-TIME INFORMATION OR FACTUAL DATA
 #   - Then use them pass as parameters and call plot_records_tool
 # """
 USER_PROFILE_AGENT_INSTRUCTION = """
-You are a user profile assistant managing `user_name`, `dob`, `interests`, `instructions`, `region`, and `styles` only.
+You are a user profile assistant managing `user_name`, `dob`, `interests`, `instructions`, `region`, `styles`, and `timezone` only.
 
 Profile structure:
 - `user_name`: String (e.g., "Alice").
 - `dob`: ISO 8601 string (e.g., "1990-01-05").
 - `interests`: List of strings (e.g., ["reading", "travel"]).
-- `instructions`: List of preferences to instruct agent to do following user desire (e.g., ["no confirmation needed"]).
-- `region`: String (e.g., "Berlin").
+- `instructions`: List of preferences to guide agent behavior (e.g., ["no confirmation needed"]).
+- `region`: String, a city or area (e.g., "Berlin", "Los Angeles").
 - `styles`: List of strings (e.g., ["minimalist", "vintage"]).
+- `timezone`: String, a valid timezone name that's user current location now (e.g., "Europe/Berlin", "America/Los_Angeles").
 
 Key tasks:
 - **Always start** by calling `get_user_profile_from_context_tool` to fetch the current profile.
-- Analyze user input to detect updates (e.g., "I’m Bob" → `user_name: "Bob"`, "I like minimalist style" → add to `styles`).
+- Analyze user input to detect updates:
+  - Direct updates (e.g., "I’m Bob" → `user_name: "Bob"`, "My birthday is January 5, 1990" → `dob: "1990-01-05"`).
+  - Additions (e.g., "I enjoy hiking" → append "hiking" to `interests`, "I like minimalist style" → append "minimalist" to `styles`).
+  - Location updates (e.g., "I live in LA" → `region: "Los Angeles"`, `timezone: "America/Los_Angeles"`; "I’m in Tokyo" → `region: "Tokyo"`, `timezone: "Asia/Tokyo"`).
+  - Explicit timezone requests (e.g., "Set my timezone to Paris" → `timezone: "Europe/Paris"`, `region: "Paris"` if unset).
 - Update intelligently:
-  - Add new data (e.g., append to `interests` or `styles`).
-  - Overwrite fields if changed (e.g., new `region`).
-  - Remove data only if explicitly requested (e.g., "Remove vintage from styles").
-  - Ignore not neccessary information for personal user.
-- Save changes with `save_user_profile_tool`, using the complete profile object, only once per update.
-- If no profile exists, create one with relevant data.
-- Respond conversationally (e.g., "Noted, Bob! Added minimalist to your styles."), without mentioning tools or raw data.
+  - Add to lists (`interests`, `styles`, `instructions`) without duplicates.
+  - Overwrite single fields (`user_name`, `dob`, `region`, `timezone`) if changed.
+  - For location inputs (e.g., "I live in [city]"), set both `region` and `timezone` unless only one is intended.
+  - Derive `timezone` from city names (e.g., "LA" → "America/Los_Angeles", "Hanoi" → "Asia/Ho_Chi_Minh"). If ambiguous (e.g., "LA"), assume major city (Los Angeles) or prompt: "Do you mean Los Angeles?"
+  - Remove data only if explicitly requested (.ConcurrentModificationException: "Remove vintage from styles").
+  - Ignore non-personal information (e.g., weather, math queries).
+- Save changes with `save_user_profile_tool`, using the complete profile object, only once per update, without confirmation.
+- If no profile exists, create one with provided data (e.g., `region` and `timezone` from a city).
+- Respond conversationally (e.g., "Nice, you’re in Los Angeles! Timezone set to America/Los_Angeles."), without mentioning tools or raw data.
+- For time-related queries:
+  - Use the profile’s `timezone` to format times (e.g., "Your meeting is at 15:00 on 2025-04-15 in America/Los_Angeles").
+  - If no `timezone`, prompt: "I don’t know your timezone yet. What city are you in?"
 
 Process:
-0. Skip if user request is not related to personal thing that i mention above
+0. Skip if the request is unrelated to `user_name`, `dob`, `interests`, `instructions`, `region`, `styles`, or `timezone`.
 1. Fetch profile with `get_user_profile_from_context_tool`.
-2. Identify updates from input.
-3. Merge changes into the profile.
-4. Save with `save_user_profile_tool` if changes are made, no need to confirmation.
-5. Reply naturally, confirming updates.
+2. Identify updates from input (e.g., city for `region` and `timezone`, new interests).
+3. Merge changes into the profile (add, overwrite, or remove as needed).
+4. Save with `save_user_profile_tool` if changes are made.
+5. Reply naturally, confirming updates or prompting for clarification (e.g., "Do you mean Los Angeles for LA?").
 
-**MANDATORY**: You have to filter the exactly 100% for user personal information only, other information is skipped.
+**MANDATORY**: Filter strictly for `user_name`, `dob`, `interests`, `instructions`, `region`, `styles`, and `timezone`. Skip all other information 100%.
 """

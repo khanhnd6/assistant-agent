@@ -14,6 +14,15 @@ async def current_time(timezone: str = None) -> str:
     except pytz.UnknownTimeZoneError:
         return "Múi giờ không hợp lệ"
     
+def current_time_v2(timezone: str = None) -> str:
+    try:
+        if timezone is None: timezone = "Asia/Ho_Chi_Minh"
+        tz = pytz.timezone(timezone)
+        current_time = datetime.now(tz)
+        return str(current_time.isoformat())
+    except pytz.UnknownTimeZoneError:
+        return "Múi giờ không hợp lệ"
+    
 def convert_date(data):
     if isinstance(data, dict):  # Nếu là dict, duyệt từng key
         return {k: convert_date(v) for k, v in data.items()}
