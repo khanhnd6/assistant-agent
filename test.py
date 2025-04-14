@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from chat import chat
 import os
+import asyncio
 
 SCHEDULER = 60 * 1 #Minutes
 load_dotenv()
@@ -53,13 +54,13 @@ def send_notifications(minutes=10):
 
 async def auto_message(context: CallbackContext):
     try:
-        collection = send_notifications()
+        collection = send_notifications(5)
         if collection:
-            for user_id, msg in collection.items():
-                await context.bot.send_message(chat_id=user_id, text=msg)
-        return
+            tasks = [context.bot.send_message(chat_id=user_id, text=msg)
+                     for user_id, msg in collection.items()]
+            await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
-        print(f"Lỗi khi gửi tin nhắn tới {user_id}: {e}")
+        print(f"Lỗi khi gửi tin nhắn {e}")
 
 if __name__ == "__main__":
     app = Application.builder().token(os.getenv("TELEGRAM_TOKEN")).build()

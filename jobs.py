@@ -70,41 +70,67 @@ def generate_user_messages(records, schemas):
     return messages
 
 
-async def send_notifications():
+# async def send_notifications():
+#     try:
+#         now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        
+#         connection = MongoDBConnection()
+#         db = connection.get_database()
+        
+#         five_minutes_later = now + timedelta(minutes=5)
+        
+#         query = {
+#             "_deleted": False,
+#             "_send_notification_at": {
+#                 "$gte": now,
+#                 "$lt": five_minutes_later
+#             }
+#         }
+        
+#         records = db["RECORDS"].find(query)
+#         schemas = db["SCHEMAS"].find()
+        
+#         print(records)
+        
+#         connection.close_connection()
+        
+#         messages = generate_user_messages(records, schemas)
+#         tasks = [async_send_message(user_id, msg) for user_id, msg in messages]
+#         await asyncio.gather(*tasks)
+        
+#         logging.info(f"== Send notification job successfully at {now} ==")
+        
+#     except Exception as e:
+#         logging.error(f"== Error happened: {str(e)} ==")
+    
+def send_notifications(minutes=10):
     try:
         now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-        
-        connection = MongoDBConnection()
+        connection = MongoDBConnection(silent=True)
         db = connection.get_database()
-        
-        five_minutes_later = now + timedelta(minutes=5)
-        
-        query = {
-            "_deleted": False,
-            "_send_notification_at": {
-                "$gte": now,
-                "$lt": five_minutes_later
-            }
-        }
-        
-        records = db["RECORDS"].find(query)
-        schemas = db["SCHEMAS"].find()
-        
-        print(records)
-        
-        connection.close_connection()
-        
+        five_minutes = now + timedelta(minutes=minutes)
+        query = {"_deleted": False, "_send_notification_at": { "$gte": now, "$lt": five_minutes}}
+        records = list(db["RECORDS"].find(query))
+        schemas = list(db["SCHEMAS"].find())
+
+        # collection = defaultdict(list)
+        # for record in records:
+        #     user_id = record["_user_id"]
+        #     clean_data = {k: v for k, v in record.items() if not k.startswith('_')}
+        #     if clean_data: collection[user_id].append(clean_data)
+
+        # message = defaultdict(str)
+        # for user, records in collection.items():
+        #     result = ["🔔 Notification \n"] + [
+        #         f"{idx+1}. " + ". ".join([f"{attr.capitalize()}: {value}" for attr, value in record.items()])
+        #         for idx, record in enumerate(records)
+        #     ]
+        #     message[user] = '\n'.join(result)
+
         messages = generate_user_messages(records, schemas)
-        tasks = [async_send_message(user_id, msg) for user_id, msg in messages]
-        await asyncio.gather(*tasks)
         
-        logging.info(f"== Send notification job successfully at {now} ==")
-        
+        db["RECORDS"].update_many(query, {"$set": {"_send_notification_at": None}})
+        connection.close_connection()
+        return messages
     except Exception as e:
-        logging.error(f"== Error happened: {str(e)} ==")
-    
-def start_scheduler():
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(send_notifications, IntervalTrigger(minutes=5, start_date=datetime.now(timezone.utc)))
-    scheduler.start()
-    return scheduler
+        print(f"Error: {e}")

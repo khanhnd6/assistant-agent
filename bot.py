@@ -1,4 +1,4 @@
-from telegram.ext import CommandHandler, MessageHandler, Application, filters, ContextTypes
+from telegram.ext import CommandHandler, MessageHandler, Application, filters, ContextTypes, CallbackContext
 from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
@@ -9,6 +9,7 @@ import asyncio
 import pytz
 from datetime import datetime
 import logging
+from jobs import send_notifications
 
 from utils.database import MongoDBConnection
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 tf = TimezoneFinder()
 geolocator = Nominatim(user_agent="telegram-bot")
+SCHEDULER = 60 * 1 #Minutes
 
 if not os.getenv('TELEGRAM_TOKEN'):
     raise ValueError("TELEGRAM_TOKEN not found in environment variables")
@@ -273,6 +275,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Failed to send photo for user {user_id}: {e}")
 
+
+async def auto_message(context: CallbackContext):
+    try:
+        collection = send_notifications(5)
+        print("collection: ", collection)
+        if collection:
+            tasks = [context.bot.send_message(chat_id=user_id, text=msg)
+                     for user_id, msg in collection]
+            await asyncio.gather(*tasks, return_exceptions=True)
+    except Exception as e:
+        print(f"Lỗi khi gửi tin nhắn {e}")
+        
 if __name__ == "__main__":
     app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
     app.add_handler(CommandHandler("start", start))
@@ -280,5 +294,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("mytimezone", handle_get_time_zone))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    logger.info("Starting chatbot...")
+    app.job_queue.run_repeating(auto_message, interval=SCHEDULER)
+    print(f"🤖 Bot đang chạy và sẽ kiểm tra thông báo mỗi {SCHEDULER} giây")
     app.run_polling()
