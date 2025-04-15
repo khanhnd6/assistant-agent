@@ -279,9 +279,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def auto_message(context: CallbackContext):
     try:
-        collection = send_notifications(1)
+        collection = await send_notifications(1)
         print("collection: ", collection)
-        collection = await send_notifications(5)
+        # collection = await send_notifications(5)
         if collection:
             tasks = [
                 context.bot.send_message(chat_id=user_id, text=msg)
