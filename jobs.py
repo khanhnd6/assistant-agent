@@ -1,14 +1,8 @@
-import logging
-from datetime import datetime, timedelta
-from utils.database import MongoDBConnection
-from utils.telegram import async_send_message
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from utils.database import AsyncMongoDBConnection
 from collections import defaultdict
-import asyncio
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.schedulers.background import BackgroundScheduler
-
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -49,15 +43,12 @@ def generate_user_messages(records, schemas):
     # Generate messages
     messages = []
     for user_id, schemas_data in grouped.items():
-        message_lines = [f" 🔔 Reminder Notification 🔔 "]
+        message_lines = []
         
         for schema_name, records_list in schemas_data.items():
             if schema_name in schema_map:
-                schema_display = schema_map[schema_name]["display_name"]
-                message_lines.append(f"\n{schema_display}:")
-                
-                for i, record in enumerate(records_list, 1):
-                    message_lines.append(f"\nItem #{i}:")
+                for record in records_list:
+                    message_lines.append(f"\n🔔: ")
                     field_map = schema_map[schema_name]["fields"]
                     for key, value in record.items():
                         if key in field_map:
@@ -103,34 +94,67 @@ def generate_user_messages(records, schemas):
 #     except Exception as e:
 #         logging.error(f"== Error happened: {str(e)} ==")
     
-def send_notifications(minutes=10):
+async def send_notifications(minutes=10):
     try:
         now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-        connection = MongoDBConnection(silent=True)
+        boundaries = now + timedelta(minutes=minutes)
+
+        connection = AsyncMongoDBConnection()
+        await connection.connect()
         db = connection.get_database()
-        five_minutes = now + timedelta(minutes=minutes)
-        query = {"_deleted": False, "_send_notification_at": { "$gte": now, "$lt": five_minutes}}
-        records = list(db["RECORDS"].find(query))
-        schemas = list(db["SCHEMAS"].find())
 
-        # collection = defaultdict(list)
-        # for record in records:
-        #     user_id = record["_user_id"]
-        #     clean_data = {k: v for k, v in record.items() if not k.startswith('_')}
-        #     if clean_data: collection[user_id].append(clean_data)
+        query = {
+            "_deleted": False,
+            "_send_notification_at": {"$gte": now, "$lt": boundaries}
+        }
 
-        # message = defaultdict(str)
-        # for user, records in collection.items():
-        #     result = ["🔔 Notification \n"] + [
-        #         f"{idx+1}. " + ". ".join([f"{attr.capitalize()}: {value}" for attr, value in record.items()])
-        #         for idx, record in enumerate(records)
-        #     ]
-        #     message[user] = '\n'.join(result)
+        print("📩 Job starting at:", now, "| Searching until:", boundaries)
 
-        messages = generate_user_messages(records, schemas)
-        
-        db["RECORDS"].update_many(query, {"$set": {"_send_notification_at": None}})
-        connection.close_connection()
+        records_cursor = db["RECORDS"].find(query)
+        schemas_cursor = db["SCHEMAS"].find()
+
+        records = await records_cursor.to_list(length=None)
+        schemas = await schemas_cursor.to_list(length=None)
+
+        schema_map = {
+            (str(schema["user_id"]), schema["name"]): schema
+            for schema in schemas
+        }
+
+        collection = defaultdict(list)
+
+        for record in records:
+            user_id = str(record["_user_id"])
+            schema_name = record.get("_schema_name")
+            schema = schema_map.get((user_id, schema_name), {})
+            field_map = {
+                field["name"]: field["display_name"]
+                for field in schema.get("fields", [])
+            }
+
+            clean_data = {
+                field_map.get(k, k): v
+                for k, v in record.items()
+                if not k.startswith("_") and k in field_map
+            }
+
+            if clean_data:
+                collection[user_id].append(clean_data)
+
+        messages = defaultdict(str)
+
+        for user, user_records in collection.items():
+            result = [
+                f"🔔 " + ". ".join([f"{attr.capitalize()}: {value}" for attr, value in record.items()])
+                for record in user_records
+            ]
+            messages[user] = '\n\n'.join(result)
+
+        await db["RECORDS"].update_many(query, {"$set": {"_send_notification_at": None}})
+        await connection.close_connection()
+
         return messages
+
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error in send_notifications: {e}")
+        return None

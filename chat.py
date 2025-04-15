@@ -34,9 +34,9 @@ async def chat(message: str, user_id: int):
         db = mongodb_connection.get_database()
         db_schemas = db["SCHEMAS"].find({"user_id": user_id, "deleted": False}, {"_id": 0})
         db_user_profile = db["USER_PROFILES"].find_one({"user_id": user_id}, {"_id": 0})
-        mongodb_connection.close_connection()
         
         context = UserContext(user_id = user_id, schemas=[schema for schema in db_schemas], user_profile=db_user_profile)
+        mongodb_connection.close_connection()
         
         # retrieve chat history
         start_time = time.time()
@@ -73,6 +73,7 @@ async def chat(message: str, user_id: int):
         return result.final_output
     except Exception as ex:
         # # logger.error(f"Error in chat: {str(ex)}")
+        raise ex
         print(f"Error in chat: {str(ex)}")
         return "Error happened, please try again!"
 

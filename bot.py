@@ -8,14 +8,14 @@ import os
 import asyncio
 import pytz
 from datetime import datetime
-import logging
+# import logging
 from jobs import send_notifications
 
 from utils.database import MongoDBConnection
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
 
 load_dotenv()
 tf = TimezoneFinder()
@@ -29,7 +29,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.username or update.message.from_user.first_name
     
-    logger.info(f"User {user_id} started the bot")
+    # logger.info(f"User {user_id} started the bot")
     
     connection = MongoDBConnection()
     collection = connection.get_database()["USER_PROFILES"]
@@ -90,7 +90,7 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lat, lon = loc.latitude, loc.longitude
     tz_name = tf.timezone_at(lat=lat, lng=lon)
 
-    logger.info(f"User {user_id} shared location: ({lat}, {lon})")
+    # logger.info(f"User {user_id} shared location: ({lat}, {lon})")
 
     if not tz_name:
         await update.message.reply_text("😕 Sorry, couldn't determine timezone from your location.")
@@ -149,7 +149,7 @@ async def handle_set_time_zone(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
     
-    logger.info(f"User {user_id} set timezone for place: {place}")
+    # logger.info(f"User {user_id} set timezone for place: {place}")
 
     location = geolocator.geocode(place)
     if not location:
@@ -210,7 +210,7 @@ async def handle_get_time_zone(update: Update, context: ContextTypes.DEFAULT_TYP
     user_id = update.message.from_user.id
     user_name = update.message.from_user.username or update.message.from_user.first_name
     
-    logger.info(f"User {user_id} requested timezone")
+    # logger.info(f"User {user_id} requested timezone")
 
     connection = MongoDBConnection()
     collection = connection.get_database()["USER_PROFILES"]
@@ -261,7 +261,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     message = update.message.text
     
-    logger.info(f"User {user_id} sent message: {message}")
+    # logger.info(f"User {user_id} sent message: {message}")
 
     response = await chat(message, user_id)
     await update.message.reply_text(str(response), parse_mode='Markdown')
@@ -273,19 +273,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_photo(photo=photo)
             os.remove(photo_path)
         except Exception as e:
-            logger.error(f"Failed to send photo for user {user_id}: {e}")
+            # logger.error(f"Failed to send photo for user {user_id}: {e}")
+            print("error", e)
 
 
 async def auto_message(context: CallbackContext):
     try:
-        collection = send_notifications(5)
-        print("collection: ", collection)
+        collection = await send_notifications(5)
         if collection:
-            tasks = [context.bot.send_message(chat_id=user_id, text=msg)
-                     for user_id, msg in collection]
+            tasks = [
+                context.bot.send_message(chat_id=user_id, text=msg)
+                for user_id, msg in collection.items()
+            ]
             await asyncio.gather(*tasks, return_exceptions=True)
+        return
     except Exception as e:
-        print(f"Lỗi khi gửi tin nhắn {e}")
+        print(f"Lỗi khi gửi tin nhắn: {e}")
         
 if __name__ == "__main__":
     app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()

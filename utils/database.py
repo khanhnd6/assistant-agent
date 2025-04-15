@@ -1,3 +1,4 @@
+from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
@@ -49,3 +50,21 @@ class RedisCache:
 
     def get(self, key):
         return self.redis.get(key)
+    
+class AsyncMongoDBConnection:
+    def __init__(self):
+        self.client = AsyncIOMotorClient(os.getenv("MONGODB_CONN"),serverSelectionTimeoutMS=5000)
+        self.db = self.client[os.getenv("MONGODB_DATABASE")]
+
+    async def connect(self):
+        try:
+            await self.client.admin.command("ping")
+        except Exception as e:
+            print(f"❌ MongoDB connection failed: {e}")
+            raise
+
+    def get_database(self):
+        return self.db
+
+    async def close_connection(self):
+        self.client.close()
