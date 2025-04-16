@@ -157,10 +157,12 @@ Notes:
 
 Context information:
 - Defined schemas: {schemas}
+- User information: {user_profile}
 - Current time(ISO format): {current_time}
-      """.format(
+""".format(
         CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX = CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX, 
         schemas=schemas,
+        user_profile=user_profile,
         local_tz = str(user_profile.get("timezone")), 
         current_time=now)
 
@@ -271,6 +273,9 @@ You are a helpful assistant responsible for managing schema for the user's datab
 
 3. When deleting a schema:
 - Explicitly confirm with the user before calling `delete_schema_tool`.
+
+4. Show schema/structure:
+- You can explicitly inform user about the schemas information in friendly tone.
 
 ## Tool Execution:
 - Allow to call tools in parallel for different ones only if multiple schemas are requested

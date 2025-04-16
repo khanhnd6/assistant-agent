@@ -73,7 +73,7 @@ async def chat(message: str, user_id: int, is_sys_message = False):
         return result.final_output
     except Exception as ex:
         # # logger.error(f"Error in chat: {str(ex)}")
-        raise ex
+        # raise ex
         print(f"Error in chat: {str(ex)}")
         return "Error happened, please try again!"
 
