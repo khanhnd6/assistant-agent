@@ -206,6 +206,10 @@ async def handle_set_time_zone(update: Update, context: ContextTypes.DEFAULT_TYP
         "You can continue to chat with your assistant.",
         parse_mode='Markdown'
     )
+    
+    response = await chat("The user has location sharing enabled. Greet the user.", user_id, True)
+    await update.message.reply_text(str(response), parse_mode='Markdown')
+
 
 async def handle_get_time_zone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
