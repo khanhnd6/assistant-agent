@@ -24,7 +24,7 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 REDIS_EXPERATION_IN = 1800 # 30 mins
 r = RedisCache()
 
-async def chat(message: str, user_id: int):
+async def chat(message: str, user_id: int, is_sys_message = False):
     try:
         start_time = time.time()
         conversation = []
@@ -60,7 +60,7 @@ async def chat(message: str, user_id: int):
         #     "content": f"Current time: {now}"
         # })
         
-        conversation.append({"content": message, "role": "user"})
+        conversation.append({"content": message, "role": "system" if is_sys_message else "user"})
         start_time = time.time()
         result = await Runner.run(
             pre_process_agent, 

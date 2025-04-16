@@ -68,7 +68,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "You can change it with /settimezone or share a new location.",
             parse_mode='Markdown'
         )
-    
+        response = await chat("The user has returned. Greet the user warmly.You may also ask if they'd like to continue or need help with anything new.", user_id, True)
+        await update.message.reply_text(str(response), parse_mode='Markdown')
     else:
         location_button = KeyboardButton("📍 Share location", request_location=True)
         reply_markup = ReplyKeyboardMarkup([[location_button]], resize_keyboard=True, one_time_keyboard=True)
@@ -132,6 +133,9 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "You can continue to chat with your assistant or update your timezone with /settimezone.",
         parse_mode='Markdown'
     )
+    
+    response = await chat("The user has location sharing enabled. Greet the user.", user_id, True)
+    await update.message.reply_text(str(response), parse_mode='Markdown')
 
 async def handle_set_time_zone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
