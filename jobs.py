@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from utils.database import AsyncMongoDBConnection
 from collections import defaultdict
 from dotenv import load_dotenv
+import asyncio
+import pytz
 
 load_dotenv()
 
@@ -112,13 +114,20 @@ async def send_notifications(minutes=10):
 
         records_cursor = db["RECORDS"].find(query)
         schemas_cursor = db["SCHEMAS"].find()
+        user_profiles_cursor = db["USER_PROFILES"].find()
 
         records = await records_cursor.to_list(length=None)
         schemas = await schemas_cursor.to_list(length=None)
+        user_profiles_data = await user_profiles_cursor.to_list(length=None)
 
         schema_map = {
             (str(schema["user_id"]), schema["name"]): schema
             for schema in schemas
+        }
+
+        user_profiles = {
+            str(profile["user_id"]): profile
+            for profile in user_profiles_data
         }
 
         collection = defaultdict(list)
@@ -139,16 +148,26 @@ async def send_notifications(minutes=10):
             }
 
             if clean_data:
-                collection[user_id].append(clean_data)
+                collection[user_id].append((schema.get("display_name", schema_name), clean_data))
 
         messages = defaultdict(str)
 
         for user, user_records in collection.items():
-            result = [
-                f"🔔 " + ". ".join([f"{attr.capitalize()}: {value}" for attr, value in record.items()])
-                for record in user_records
-            ]
-            messages[user] = '\n\n'.join(result)
+            profile = user_profiles.get(user_id, {})
+            timezone_str = profile.get("timezone")
+            tz = pytz.timezone(timezone_str) if timezone_str in pytz.all_timezones else None
+
+            message_lines = ["*🔔 Notification 🔔*"]
+            for schema_display_name, record in user_records:
+                entry_lines = [f"*📌 {schema_display_name if schema_display_name else 'Note'}*"]
+                for attr, value in record.items():
+                    if isinstance(value, datetime):
+                        value = pytz.utc.localize(value) 
+                        if tz: value = value.astimezone(tz)
+                        value = value.strftime('%Y-%m-%d %H:%M:%S')
+                    entry_lines.append(f"• {attr}: {value}")
+                message_lines.append("\n".join(entry_lines))
+            messages[user] = "\n\n".join(message_lines)
 
         await db["RECORDS"].update_many(query, {"$set": {"_send_notification_at": None}})
         await connection.close_connection()
@@ -158,3 +177,45 @@ async def send_notifications(minutes=10):
     except Exception as e:
         print(f"❌ Error in send_notifications: {e}")
         return None
+    
+# Debug Purpose Only
+# async def main():
+#     now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+#     send_time = now_utc + timedelta(minutes=1)
+
+#     connection = AsyncMongoDBConnection()
+#     await connection.connect()
+#     db = connection.get_database()
+
+#     await db["RECORDS"].insert_one({
+#         "expenditure_name": "Đi ăn tối",
+#         "amount": 150000,
+#         "expenditure_date": datetime(2025, 4, 15, 14, 21, tzinfo=timezone.utc),
+#         "note": "Thông báo lại sau 4 phút.",
+#         "_user_id": 8138225670,
+#         "_record_id": "f07b4a66-2619-4565-8476-a3252a037e2a",
+#         "_schema_name": "expenditure",
+#         "_send_notification_at": send_time,
+#         "_deleted": False
+#     })
+
+#     await db["RECORDS"].insert_one({
+#         "expenditure_name": "Đi ăn tối 2",
+#         "amount": 150000,
+#         "expenditure_date": datetime(2025, 4, 15, 16, 21, tzinfo=timezone.utc),
+#         "note": "Thông báo lại sau 4 phút.",
+#         "_user_id": 8138225670,
+#         "_record_id": "f07b4a66-2619-4565-8476-a3252a037e2a",
+#         "_schema_name": "expenditure",
+#         "_send_notification_at": send_time,
+#         "_deleted": False
+#     })
+
+#     await connection.close_connection()
+
+#     messages = await send_notifications()
+#     for uid, msg in messages.items():
+#         print(f"📨 Message for {uid}:\n{msg}")
+
+# if __name__ == "__main__":
+#     asyncio.run(main())

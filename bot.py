@@ -292,7 +292,7 @@ async def auto_message(context: CallbackContext):
         # collection = await send_notifications(5)
         if collection:
             tasks = [
-                context.bot.send_message(chat_id=user_id, text=msg)
+                context.bot.send_message(chat_id=user_id, text=msg, parse_mode='Markdown')
                 for user_id, msg in collection.items()
             ]
             await asyncio.gather(*tasks, return_exceptions=True)
