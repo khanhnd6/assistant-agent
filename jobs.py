@@ -4,6 +4,7 @@ from collections import defaultdict
 from dotenv import load_dotenv
 import asyncio
 import pytz
+import re
 
 load_dotenv()
 
@@ -62,39 +63,11 @@ def generate_user_messages(records, schemas):
     
     return messages
 
-
-# async def send_notifications():
-#     try:
-#         now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-        
-#         connection = MongoDBConnection()
-#         db = connection.get_database()
-        
-#         five_minutes_later = now + timedelta(minutes=5)
-        
-#         query = {
-#             "_deleted": False,
-#             "_send_notification_at": {
-#                 "$gte": now,
-#                 "$lt": five_minutes_later
-#             }
-#         }
-        
-#         records = db["RECORDS"].find(query)
-#         schemas = db["SCHEMAS"].find()
-        
-#         print(records)
-        
-#         connection.close_connection()
-        
-#         messages = generate_user_messages(records, schemas)
-#         tasks = [async_send_message(user_id, msg) for user_id, msg in messages]
-#         await asyncio.gather(*tasks)
-        
-#         logging.info(f"== Send notification job successfully at {now} ==")
-        
-#     except Exception as e:
-#         logging.error(f"== Error happened: {str(e)} ==")
+def beautify_field_name(name):
+    # Tách theo dấu _ hoặc camelCase rồi viết hoa từng từ
+    name = re.sub(r'(?<!^)(?=[A-Z])', '_', name)  # camelCase → snake_case
+    parts = name.replace('_', ' ').split()
+    return ' '.join(word.capitalize() for word in parts)
     
 async def send_notifications(minutes=10):
     try:
@@ -136,19 +109,28 @@ async def send_notifications(minutes=10):
             user_id = str(record["_user_id"])
             schema_name = record.get("_schema_name")
             schema = schema_map.get((user_id, schema_name), {})
-            field_map = {
-                field["name"]: field["display_name"]
-                for field in schema.get("fields", [])
-            }
 
-            clean_data = {
-                field_map.get(k, k): v
-                for k, v in record.items()
-                if not k.startswith("_") and k in field_map
-            }
+            if schema:  # Nếu có schema thì lấy theo field_map như trước
+                field_map = {
+                    field["name"]: field["display_name"]
+                    for field in schema.get("fields", [])
+                }
+                clean_data = {
+                    field_map.get(k, k): v
+                    for k, v in record.items()
+                    if not k.startswith("_") and k in field_map
+                }
+                display_name = schema.get("display_name", schema_name)
+            else:  # Nếu không có schema
+                clean_data = {
+                    beautify_field_name(k): v
+                    for k, v in record.items()
+                    if not k.startswith("_")
+                }
+                display_name = "Note"
 
             if clean_data:
-                collection[user_id].append((schema.get("display_name", schema_name), clean_data))
+                collection[user_id].append((display_name, clean_data))
 
         messages = defaultdict(str)
 
@@ -165,13 +147,14 @@ async def send_notifications(minutes=10):
                         value = pytz.utc.localize(value) 
                         if tz: value = value.astimezone(tz)
                         value = value.strftime('%Y-%m-%d %H:%M:%S')
+                    if isinstance(value, bool):
+                        value = "✅" if value else "❌"
                     entry_lines.append(f"• {attr}: {value}")
                 message_lines.append("\n".join(entry_lines))
             messages[user] = "\n\n".join(message_lines)
 
         await db["RECORDS"].update_many(query, {"$set": {"_send_notification_at": None}})
         await connection.close_connection()
-
         return messages
 
     except Exception as e:
@@ -201,18 +184,15 @@ async def send_notifications(minutes=10):
 
 #     await db["RECORDS"].insert_one({
 #         "expenditure_name": "Đi ăn tối 2",
-#         "amount": 150000,
+#         "amount": False,
 #         "expenditure_date": datetime(2025, 4, 15, 16, 21, tzinfo=timezone.utc),
 #         "note": "Thông báo lại sau 4 phút.",
 #         "_user_id": 8138225670,
-#         "_record_id": "f07b4a66-2619-4565-8476-a3252a037e2a",
-#         "_schema_name": "expenditure",
 #         "_send_notification_at": send_time,
 #         "_deleted": False
 #     })
 
 #     await connection.close_connection()
-
 #     messages = await send_notifications()
 #     for uid, msg in messages.items():
 #         print(f"📨 Message for {uid}:\n{msg}")
