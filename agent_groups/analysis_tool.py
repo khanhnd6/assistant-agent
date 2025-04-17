@@ -55,7 +55,7 @@ plot_records_tool = FunctionTool(
 async def get_all_data(wrapper: RunContextWrapper[UserContext], schema_name: str) -> str:
     db = MongoDBConnection().get_database()
     records = list(db['RECORDS'].find({"_user_id": wrapper.context.user_id, "_schema_name": schema_name},{"_id": 0}))
-    return remove_first_underscore(convert_to_local_timezone(records))
+    return remove_first_underscore(convert_to_local_timezone(records, local_tz=str(wrapper.context.user_profile["timezone"])))
 
 def retrieve_user_profile(wrapper: RunContextWrapper[UserContext]) -> str:
     user_data = wrapper.context.user_profile

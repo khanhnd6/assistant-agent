@@ -78,7 +78,7 @@ async def retrieve_sample(wrapper: RunContextWrapper[UserContext], args: str) ->
 
         mongodb_connection.close_connection()
 
-        records = convert_to_local_timezone(records)
+        records = convert_to_local_timezone(records, local_tz=str(wrapper.context.user_profile["timezone"]))
         
         return str(records)
     except Exception as e:

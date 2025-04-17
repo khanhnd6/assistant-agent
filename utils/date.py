@@ -36,29 +36,30 @@ def convert_date(data):
     else:
         return data
 
-def convert_to_local_timezone(data, as_string=True, format_str="%Y-%m-%d %H:%M:%S %z"):
+def convert_to_local_timezone(data, local_tz, as_string=True, format_str="%Y-%m-%d %H:%M:%S %z"):
     """
     Recursively convert all datetime objects in a data structure to the local timezone.
     
     Args:
         data: Input data (dict, list, datetime, or other).
+        local_tz: Target timezone string (e.g., "Asia/Bangkok").
         as_string: If True, returns datetimes as formatted strings; if False, returns datetime objects.
         format_str: Format for string output (used only if as_string=True).
     
     Returns:
         Data with all datetime objects converted to the local timezone.
     """
-    # Get the local timezone
-    local_tz = get_localzone()
-    utc_tz = pytz.UTC
+    if isinstance(local_tz, str):
+        local_tz = pytz.timezone(local_tz)
 
     if isinstance(data, dict):
-        return {k: convert_to_local_timezone(v, as_string, format_str) for k, v in data.items()}
+        return {k: convert_to_local_timezone(v, local_tz, as_string, format_str) for k, v in data.items()}
     elif isinstance(data, list):
-        return [convert_to_local_timezone(item, as_string, format_str) for item in data]
+        return [convert_to_local_timezone(item, local_tz, as_string, format_str) for item in data]
     elif isinstance(data, datetime):
-        if data.tzinfo is None:
-            data = utc_tz.localize(data)
+        if data.tzinfo is None or data.tzinfo.utcoffset(data) is None:
+            data = pytz.UTC.localize(data)
+
         local_dt = data.astimezone(local_tz)
         return local_dt.strftime(format_str) if as_string else local_dt
     else: 
