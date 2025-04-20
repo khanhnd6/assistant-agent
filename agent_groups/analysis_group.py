@@ -3,7 +3,6 @@ from agents import Agent, WebSearchTool, ModelSettings
 from agent_groups.analysis_tool import *
 from utils.hook import DebugAgentHooks
 from utils.context import UserContext
-from utils.date import current_time
 from pydantic import BaseModel
 
 model="gpt-4o-mini"
@@ -12,7 +11,7 @@ research_agent = Agent[UserContext](
     name="research_agent",
     model=model,
     handoff_description="An agent that can search for real-time data, info through Internet",
-    instructions=dynamic_research_instruction,
+    instructions=dynamic_research_instruction_v2,
     tools=[WebSearchTool(search_context_size="low")],
     hooks=DebugAgentHooks(display_name="Research Agent"),
     model_settings=ModelSettings(tool_choice="required")
@@ -42,7 +41,7 @@ aggregation_agent = Agent[UserContext](
     handoff_description="An agent that can do querying, analyzing, summarizing, visualizing data of user",
     instructions=dynamic_aggregation_instruction,
     tools=[
-        get_all_data, current_time, 
+        get_all_data, 
         research_agent.as_tool(tool_name="search_tool", tool_description="A tool that can search for real-time data, info throught Internet"), 
         plot_agent.as_tool(tool_name="plot_tool", tool_description="A tool that can plot bar based on all of your information")],
     hooks=DebugAgentHooks(display_name="Aggretation Agent"),

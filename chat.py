@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import ujson as json
 import os
 import time
+import re
 # import logging
 # import asyncio
 
@@ -23,6 +24,12 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
 REDIS_EXPERATION_IN = 1800 # 30 mins
 r = RedisCache()
+r.clear()
+
+def clean_for_telegram(text):
+    # Thay ký tự theo yêu cầu
+    text = re.sub(r'^(?!.*\*.*\*).*?\*', lambda m: m.group(0).replace('*', '-'), text, flags=re.M)
+    return text
 
 async def chat(message: str, user_id: int, is_sys_message = False):
     try:
@@ -70,7 +77,7 @@ async def chat(message: str, user_id: int, is_sys_message = False):
         conversation = conversation[-10:]
         print("LLM:",time.time() - start_time)
         r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
-        return result.final_output
+        return clean_for_telegram(result.final_output)
     except Exception as ex:
         # # logger.error(f"Error in chat: {str(ex)}")
         # raise ex
