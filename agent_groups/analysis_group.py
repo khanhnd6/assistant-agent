@@ -25,7 +25,16 @@ plot_agent = Agent[UserContext](
     handoff_description="An agent that can draw plot data",
     instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
         Follow these step:
-        1. Automatically choose the chart type.
+        1. Choose the appropriate chart type automatically:
+           - Use "line" chart if the x axis represents a continuous sequence (e.g., time, dates, or ordered numbers) and the y values are numerical.
+           - Use "bar" chart if the x axis represents discrete categories (e.g., product names, countries) and y values are numerical.
+           - Use "pie" chart only if:
+            + The x values represent distinct labels/categories,
+            + The y values are positive and represent parts of a whole (e.g., percentages, totals),
+            + The number of data points is small (typically ≤ 6),
+            + And the total sum of y is meaningful to compare as a whole (e.g., budget, proportions).
+           - Avoid using "pie" chart if the y values are very close to each other or if there are too many slices.
+           - If no chart type fits the data, prefer "bar" as the fallback.
         2. Prepare the data carefully accroding to `plot_records_tool` input format.
         3. Make sure to verify and preserve the correct numerical scale — e.g., don't confuse 80,000 with 8,000,000.
         4. Respect currency and number formatting based on user's language.
@@ -33,7 +42,8 @@ plot_agent = Agent[UserContext](
     """,
     tools=[plot_records_tool],
     hooks=DebugAgentHooks(display_name="Plot Agent"),
-    output_type=PlotOuput
+    output_type=PlotOuput,
+    model_settings=ModelSettings(tool_choice="required")
 )
 
 aggregation_agent = Agent[UserContext](

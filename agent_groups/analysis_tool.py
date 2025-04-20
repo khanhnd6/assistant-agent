@@ -39,7 +39,7 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
         file_name = f"{wrapper.context.user_id}_image.jpg"
         plt.savefig(file_name)
         plt.close()
-        return 'Generate successfully'
+        return f"Generate successfully. File name: {file_name}. Agent doesn't need to call this tool again"
     except Exception as e:
         print('Try again - Error:', e)
 
