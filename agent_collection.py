@@ -3,7 +3,6 @@ from tools.record_tools import create_record_tool, retrieve_records_tool, delete
 from agent_groups.analysis_group import analysis_agent
 from utils.hook import DebugAgentHooks
 from tools.user_profile_tool import save_user_profile_tool, get_user_profile_from_context_tool
-from guardrails.input_guardrails import record_input_guardrail
 from agents import Agent, ModelSettings, handoff
 from utils.context import UserContext, UserProfileOutput, RecordCommands
 from instructions import *
