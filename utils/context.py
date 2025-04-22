@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Literal, Optional, Dict
+from typing import List, Literal, Optional, Dict, Any
 from pydantic import Field, BaseModel
 from datetime import date
 
@@ -75,12 +75,15 @@ class RecordCommand(BaseSchema):
     schema_name: str
     action: Literal["create", "update", "delete", None]
     existed: bool
-    confirmed: bool
     command: str
 
 class RecordCommands(BaseSchema):
     commands: list[RecordCommand]
 
+class ActionResult(BaseSchema):
+    is_success: bool
+    message: Optional[str]
+    data: Optional[str]
     
 
 # Đối tượng ngữ cảnh của mỗi người dùng

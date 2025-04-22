@@ -6,6 +6,7 @@ from tools.user_profile_tool import save_user_profile_tool, get_user_profile_fro
 from agents import Agent, ModelSettings, handoff
 from utils.context import UserContext, UserProfileOutput, RecordCommands
 from instructions import *
+from utils.context import ActionResult
 
 model="gpt-4o-mini-2024-07-18"
 
@@ -42,10 +43,33 @@ record_agent = Agent[UserContext](
 
 record_agent.reset_tool_choice = True
 
+
+schema_agent_in_record_agent = Agent[UserContext](
+    name="schema_agent_in_record_agent",
+    model=model,
+    instructions=dynamic_schema_agent_instruction,
+    tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
+    model_settings=ModelSettings(temperature=0.1),
+    tool_use_behavior="stop_on_first_tool",
+    hooks=DebugAgentHooks("schema_agent_in_record_agent"),
+    output_type=ActionResult
+)
+
+async def schema_tool_custom_output_extractor(output):
+    return output.final_output 
+
+
 schema_checker = Agent[UserContext](
     name="record_entry_agent",
     instructions=dynamic_record_schema_checker_agent_instruction,
     handoffs=[record_agent],
+    model_settings=ModelSettings(temperature=0),
+    tools=[
+        schema_agent_in_record_agent.as_tool(
+            tool_name="schema_tool",
+            tool_description="Tool to execute schema-related request",
+            custom_output_extractor=schema_tool_custom_output_extractor)
+        ],
     hooks=DebugAgentHooks("Schema checker Agent")
 )
 
@@ -55,7 +79,7 @@ task_coordinator = Agent[UserContext](
     instructions=dynamic_task_coordinator_instruction,
     handoffs = [schema_checker, schema_agent],
     tools=[],
-    model_settings=ModelSettings(temperature=0.1, tool_choice="auto"),
+    model_settings=ModelSettings(temperature=0),
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
 
@@ -67,7 +91,7 @@ user_profile_agent = Agent[UserContext](
     tools=[save_user_profile_tool, get_user_profile_from_context_tool],
     output_type=UserProfileOutput,
     hooks=DebugAgentHooks("User Profile Agent"),
-    model_settings=ModelSettings(temperature=0.1)
+    model_settings=ModelSettings(temperature=1)
 )
 
 greeting_agent = Agent[UserContext](
@@ -83,7 +107,7 @@ navigator_agent = Agent[UserContext](
     instructions=dynamic_navigator_agent_instruction,
     handoffs=[task_coordinator, analysis_agent],
     hooks=DebugAgentHooks("Navigator Agent"),
-    model_settings= ModelSettings(tool_choice="required", temperature=0.5)
+    model_settings= ModelSettings(temperature=0.1)
 )
 
 pre_process_agent = Agent[UserContext](
@@ -94,6 +118,6 @@ pre_process_agent = Agent[UserContext](
             tool_name="user_profile_tool",
             tool_description=USER_PROFILE_TOOL_DESCRIPTION
         )],
-    model_settings=ModelSettings(temperature=0),
+    model_settings=ModelSettings(temperature=0.2),
     hooks=DebugAgentHooks("Pre-process agent"),
 )

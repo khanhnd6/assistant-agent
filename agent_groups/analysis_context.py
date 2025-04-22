@@ -13,3 +13,13 @@ class PlotArgs(BaseModel):
     y: Optional[str] = Field(description="Name of the Y-axis column")
     chart_type: Literal["line", "bar", "pie"] = Field(description="The type of chart to be drawn")
     model_config = {"json_schema_extra": {"additionalProperties": False}}
+    
+    
+
+class WebSearchInput(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500, description="The search query for Tavily")
+
+class SearchResult(BaseModel):
+    title: str
+    url: str
+    content: str
