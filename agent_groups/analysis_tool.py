@@ -6,7 +6,9 @@ from utils.date import convert_to_local_timezone
 from utils.database import MongoDBConnection
 from utils.context import UserContext
 import matplotlib.pyplot as plt
+from datetime import datetime
 import ujson as json
+import pytz
 
 async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
@@ -37,7 +39,7 @@ async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> st
         file_name = f"{wrapper.context.user_id}_image.jpg"
         plt.savefig(file_name)
         plt.close()
-        return 'Generate successfully'
+        return f"Generate successfully. File name: {file_name}. Agent doesn't need to call this tool again"
     except Exception as e:
         print('Try again - Error:', e)
 
@@ -54,7 +56,10 @@ plot_records_tool = FunctionTool(
 @function_tool
 async def get_all_data(wrapper: RunContextWrapper[UserContext], schema_name: str) -> str:
     db = MongoDBConnection().get_database()
-    records = list(db['RECORDS'].find({"_user_id": wrapper.context.user_id, "_schema_name": schema_name},{"_id": 0}))
+    records = list(db['RECORDS'].find(
+        {"_schema_name": schema_name, "_deleted": False},
+        {"_id": 0, "_user_id": 0, "_send_notification_at": 0, "_record_id": 0, "_deleted": 0, "_schema_name": 0}
+    ))
     return remove_first_underscore(convert_to_local_timezone(records, local_tz=str(wrapper.context.user_profile["timezone"])))
 
 def retrieve_user_profile(wrapper: RunContextWrapper[UserContext]) -> str:
@@ -87,10 +92,30 @@ def dynamic_research_instruction(wrapper: RunContextWrapper[UserContext], agent:
     else: instructions.insert(1, f"1. Initialize search query based on user's language")
     return '\n'.join(instructions)
 
+def dynamic_research_instruction_v2(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
+    profile = wrapper.context.user_profile
+    region = profile['region'] if profile else ""
+    current_date = None
+    if profile:
+        user_timezone = pytz.timezone(profile['timezone'])
+        current_date = datetime.now(pytz.utc).astimezone(user_timezone).strftime("%Y%m%d%H%M")
+    instructions = [
+    "Làm theo các bước sau:",
+    f"1. Đừng để tâm các phần trả lời trước đó (chỉ khi nào bạn bị gọi bởi analysis_agent mới cần quan sát)",
+    f"2. BẮT BUỘC tìm bằng Google để tra thông tin. Hiện tại là năm: {current_date[:4]}, tháng: {current_date[4:6]}, ngày: {current_date[6:8]}",
+     "4. Tóm tắt kết quả trực quan, rõ ràng, có chia ý, trình bày dưới <5 câu, kèm theo nguồn đã sử dụng"
+    ]   
+    return '\n'.join(instructions)
+
 def dynamic_aggregation_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
+    profile = wrapper.context.user_profile
+    current_date = None
+    if profile:
+        user_timezone = pytz.timezone(profile['timezone'])
+        current_date = datetime.now(pytz.utc).astimezone(user_timezone).strftime("%Y%m%d%H%M")
     instructions=[RECOMMENDED_PROMPT_PREFIX,
         "When you are transferred, do not refuse the task. Follow these step one time:",
-        "1. Call `current_time` with arugment is the region based on user's language to get specific time",
+        f"1. It is {current_date[8:]}, Day: {current_date[6:8]}, Month: {current_date[4:6]}, Year {current_date[:4]} now",
         f"2. This is all schema of users {retrieve_schemas(wrapper)}, identify the schema name that best matches the user request",
         "3. Pass the schema name to `get_all_data` tool to get all records",
         "4. If need information from external data or real-time searching, call `search_tool`",

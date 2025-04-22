@@ -51,6 +51,9 @@ class RedisCache:
     def get(self, key):
         return self.redis.get(key)
     
+    def clear(self):
+        return self.redis.flushdb()
+    
 class AsyncMongoDBConnection:
     def __init__(self):
         self.client = AsyncIOMotorClient(os.getenv("MONGODB_CONN"),serverSelectionTimeoutMS=5000)
