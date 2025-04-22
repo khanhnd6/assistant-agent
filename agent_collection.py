@@ -3,10 +3,12 @@ from tools.record_tools import create_record_tool, retrieve_records_tool, delete
 from agent_groups.analysis_group import analysis_agent
 from utils.hook import DebugAgentHooks
 from tools.user_profile_tool import save_user_profile_tool, get_user_profile_from_context_tool
+from guardrails.input_guardrails import record_input_guardrail
 from agents import Agent, ModelSettings, handoff
 from utils.context import UserContext, UserProfileOutput, RecordCommands
 from instructions import *
-model="gpt-4o-mini"
+
+model="gpt-4o-mini-2024-07-18"
 
 schema_agent = Agent[UserContext](
     name="schema_agent",
@@ -35,8 +37,17 @@ record_agent = Agent[UserContext](
     handoffs=[handoff_record_action],
     output_type=RecordCommands,
     tools=[retrieve_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="required"),
-    hooks=DebugAgentHooks("Record Agent"),
+    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="retrieve_records_tool"),
+    hooks=DebugAgentHooks("Record Agent")
+)
+
+record_agent.reset_tool_choice = True
+
+schema_checker = Agent[UserContext](
+    name="schema_checker",
+    instructions=dynamic_record_schema_checker_agent_instruction,
+    handoffs=[record_agent],
+    hooks=DebugAgentHooks("Schema checker Agent")
 )
 
 task_coordinator = Agent[UserContext](
@@ -45,7 +56,7 @@ task_coordinator = Agent[UserContext](
     instructions=dynamic_task_coordinator_instruction,
     handoffs = [record_agent, schema_agent],
     tools=[],
-    model_settings=ModelSettings(temperature=0.5, tool_choice="auto"),
+    model_settings=ModelSettings(temperature=0.1, tool_choice="auto"),
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
 
@@ -59,7 +70,6 @@ user_profile_agent = Agent[UserContext](
     hooks=DebugAgentHooks("User Profile Agent"),
     model_settings=ModelSettings(temperature=0.1)
 )
-
 
 greeting_agent = Agent[UserContext](
     name="greeting_agent",
@@ -77,26 +87,14 @@ navigator_agent = Agent[UserContext](
     model_settings= ModelSettings(tool_choice="required", temperature=0.5)
 )
 
-
-
 pre_process_agent = Agent[UserContext](
     name="pre_process_agent",
     instructions=dynamic_pre_process_instruction,
     handoffs=[navigator_agent, greeting_agent],
     tools=[user_profile_agent.as_tool(
             tool_name="user_profile_tool",
-            tool_description="""
-Tool to save user information including: 
-- user name
-- date of birth
-- region
-- styles
-- interests
-- instructions: The rules for agents
-
-Other information is skip
-            """
+            tool_description=USER_PROFILE_TOOL_DESCRIPTION
         )],
-    model_settings=ModelSettings(tool_choice="required", temperature=0),
-    hooks=DebugAgentHooks("Pre-process agent")
+    model_settings=ModelSettings(temperature=0),
+    hooks=DebugAgentHooks("Pre-process agent"),
 )
