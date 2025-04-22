@@ -43,7 +43,7 @@ record_agent = Agent[UserContext](
 record_agent.reset_tool_choice = True
 
 schema_checker = Agent[UserContext](
-    name="schema_checker",
+    name="record_entry_agent",
     instructions=dynamic_record_schema_checker_agent_instruction,
     handoffs=[record_agent],
     hooks=DebugAgentHooks("Schema checker Agent")
@@ -53,7 +53,7 @@ task_coordinator = Agent[UserContext](
     name="task_coordinator",
     model=model,
     instructions=dynamic_task_coordinator_instruction,
-    handoffs = [record_agent, schema_agent],
+    handoffs = [schema_checker, schema_agent],
     tools=[],
     model_settings=ModelSettings(temperature=0.1, tool_choice="auto"),
     hooks=DebugAgentHooks("Task Coordinator Agent")
