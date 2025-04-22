@@ -12,7 +12,8 @@ research_agent = Agent[UserContext](
     model=model,
     handoff_description="An agent that can search for real-time data, info through Internet",
     instructions=dynamic_research_instruction_v2,
-    tools=[WebSearchTool(search_context_size="low")],
+    # tools=[WebSearchTool(search_context_size="low")],
+    tools=[tavily_websearch],
     hooks=DebugAgentHooks(display_name="Research Agent"),
     model_settings=ModelSettings(tool_choice="required")
 )

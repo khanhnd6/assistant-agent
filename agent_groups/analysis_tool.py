@@ -9,7 +9,55 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import ujson as json
 import pytz
+from tavily import TavilyClient
+from dotenv import load_dotenv
+import os
+from typing import List, Dict, Any
+from agent_groups.analysis_context import WebSearchInput, SearchResult
+from utils.context import UserContext
 
+load_dotenv()
+
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
+@function_tool
+async def tavily_websearch(
+    wrapper: RunContextWrapper[UserContext], query: str
+) -> List[Dict[str, Any]]:
+    try:
+        search_input = WebSearchInput(query=query.strip())
+
+        client = TavilyClient(api_key=TAVILY_API_KEY)
+
+        response = client.search(
+            query=search_input.query,
+            search_depth="advanced",
+            max_results=5,
+            include_answer=False,
+            include_raw_content=False
+        )
+
+        # Parse and structure results
+        results = response.get("results", [])
+        formatted_results = [
+            SearchResult(
+                title=result.get("title", "No title"),
+                url=result.get("url", "No URL"),
+                content=result.get("content", "No content")
+            ).dict()
+            for result in results
+        ]
+
+        print(f"Retrieved {len(formatted_results)} results for query: {search_input.query}")
+        return formatted_results
+
+    except ValueError as ve:
+        print(f"Validation error: {str(ve)}")
+        return [{"error": f"Invalid query: {str(ve)}"}]
+    except Exception as e:
+        print(f"Tavily search failed: {str(e)}")
+        return [{"error": f"Search error: {str(e)}"}]
+    
 async def plot_records(wrapper: RunContextWrapper[UserContext], args: str) -> str:
     try:
         parsed = PlotArgs.model_validate_json(args)

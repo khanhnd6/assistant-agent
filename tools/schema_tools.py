@@ -1,9 +1,9 @@
 from agents import FunctionTool, RunContextWrapper
-from utils.context import CollectionSchema, UserContext
+from utils.context import CollectionSchema, UserContext, ActionResult
 from utils.database import MongoDBConnection
 import ujson as json
 
-async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
+async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> ActionResult:
     try:
         parsed = CollectionSchema.model_validate_json(args)
         user_id = wrapper.context.user_id
@@ -24,11 +24,11 @@ async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
             user_schemas.insert_one(schema)
         mongodb_connection.close_connection()
         
-        return 'Success'
+        return ActionResult(is_success=True, message="", data=str(schema))
     except Exception as e:
-        return f'Error {str(e)}'
+        return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)
     
-async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> str:
+async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> ActionResult:
     try:
         parsed = CollectionSchema.model_validate_json(args)
         user_id = wrapper.context.user_id
@@ -44,12 +44,11 @@ async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> s
             {"$set": schema}
         )
         mongodb_connection.close_connection()
-        
-        return 'Success'
+        return ActionResult(is_success=True, message="", data=str(schema))
     except Exception as e:
-        return 'Error'
+        return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)
 
-async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> str:
+async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> ActionResult:
     try:
         user_id = wrapper.context.user_id
         info = json.loads(info)
@@ -58,14 +57,9 @@ async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> s
         user_schemas = db["SCHEMAS"]
         user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
         
-        db = mongodb_connection.db
-        user_schemas = db["SCHEMAS"]
-        user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
-        mongodb_connection.close_connection()
-        
-        return 'Success'
+        return ActionResult(is_success=True, message="Deleted", data=None)
     except Exception as e:
-        return 'Error'
+        return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)
 
 create_schema_tool = FunctionTool(
     name="create_schema_tool",
@@ -83,7 +77,7 @@ create_schema_tool = FunctionTool(
         This tool is only invoked when executing the `create` action for schema management.
     """,
     params_json_schema=CollectionSchema.model_json_schema(),
-    on_invoke_tool=create_schema,
+    on_invoke_tool=create_schema
 )
 
 update_schema_tool = FunctionTool(
