@@ -319,6 +319,9 @@ You are the **navigator_agent**, responsible for intelligently routing user requ
     - "Compare my expenses in 2023 to 2024."
     - "Show a breakdown by category."
     - "Find any unusual spending trends."
+    - "How is the weather today?"
+    - "What's news today?"
+    - "What is the weather of this region?"
 
 - **task_coordinator**:  
   Route to `task_coordinator` for all requests involving:
