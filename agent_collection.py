@@ -8,13 +8,14 @@ from utils.context import UserContext, UserProfileOutput, RecordCommands
 from instructions import *
 from utils.context import ActionResult
 
-model="gpt-4o-mini-2024-07-18"
+model="gpt-4o-mini"
 
 schema_agent = Agent[UserContext](
     name="schema_agent",
     model=model,
     instructions=dynamic_schema_agent_instruction,
     tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
+    model_settings=ModelSettings(temperature=0.5),
     hooks=DebugAgentHooks("Schema Agent"),
 )
 
@@ -30,18 +31,6 @@ record_action_agent = Agent[UserContext](
 handoff_record_action = handoff(agent=record_action_agent)
 handoff_record_action.input_json_schema = RecordCommands.model_json_schema()
 
-record_agent = Agent[UserContext](
-    name="record_agent",
-    model=model,
-    instructions=dynamic_record_agent_instruction,
-    handoffs=[handoff_record_action],
-    output_type=RecordCommands,
-    tools=[retrieve_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="retrieve_records_tool"),
-    hooks=DebugAgentHooks("Record Agent")
-)
-
-record_agent.reset_tool_choice = True
 
 
 schema_agent_in_record_agent = Agent[UserContext](
@@ -49,7 +38,7 @@ schema_agent_in_record_agent = Agent[UserContext](
     model=model,
     instructions=dynamic_schema_agent_instruction,
     tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
-    model_settings=ModelSettings(temperature=0.1),
+    model_settings=ModelSettings(temperature=0.5),
     tool_use_behavior="stop_on_first_tool",
     hooks=DebugAgentHooks("schema_agent_in_record_agent"),
     output_type=ActionResult
@@ -59,25 +48,42 @@ async def schema_tool_custom_output_extractor(output):
     return output.final_output 
 
 
-schema_checker = Agent[UserContext](
-    name="record_entry_agent",
-    instructions=dynamic_record_schema_checker_agent_instruction,
-    handoffs=[record_agent],
-    model_settings=ModelSettings(temperature=0),
-    tools=[
-        schema_agent_in_record_agent.as_tool(
+record_agent = Agent[UserContext](
+    name="record_agent",
+    model=model,
+    instructions=dynamic_record_agent_instruction,
+    handoffs=[handoff_record_action],
+    output_type=RecordCommands,
+    tools=[retrieve_records_tool, schema_agent_in_record_agent.as_tool(
             tool_name="schema_tool",
             tool_description="Tool to execute schema-related request",
-            custom_output_extractor=schema_tool_custom_output_extractor)
-        ],
-    hooks=DebugAgentHooks("Schema checker Agent")
+            custom_output_extractor=schema_tool_custom_output_extractor)],
+    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="required", temperature=0.6),
+    hooks=DebugAgentHooks("Record Agent")
 )
+
+record_agent.reset_tool_choice = True
+
+
+# schema_checker = Agent[UserContext](
+#     name="record_entry_agent",
+#     instructions=dynamic_record_schema_checker_agent_instruction,
+#     handoffs=[record_agent],
+#     model_settings=ModelSettings(temperature=0.5),
+#     tools=[
+#         schema_agent_in_record_agent.as_tool(
+#             tool_name="schema_tool",
+#             tool_description="Tool to execute schema-related request",
+#             custom_output_extractor=schema_tool_custom_output_extractor)
+#         ],
+#     hooks=DebugAgentHooks("Schema checker Agent")
+# )
 
 task_coordinator = Agent[UserContext](
     name="task_coordinator",
     model=model,
     instructions=dynamic_task_coordinator_instruction,
-    handoffs = [schema_checker, schema_agent],
+    handoffs = [record_agent, schema_agent],
     tools=[],
     model_settings=ModelSettings(temperature=0),
     hooks=DebugAgentHooks("Task Coordinator Agent")
@@ -107,7 +113,7 @@ navigator_agent = Agent[UserContext](
     instructions=dynamic_navigator_agent_instruction,
     handoffs=[task_coordinator, analysis_agent],
     hooks=DebugAgentHooks("Navigator Agent"),
-    model_settings= ModelSettings(temperature=0.1)
+    model_settings= ModelSettings(temperature=0)
 )
 
 pre_process_agent = Agent[UserContext](
@@ -118,6 +124,6 @@ pre_process_agent = Agent[UserContext](
             tool_name="user_profile_tool",
             tool_description=USER_PROFILE_TOOL_DESCRIPTION
         )],
-    model_settings=ModelSettings(temperature=0.2),
+    model_settings=ModelSettings(temperature=0.5),
     hooks=DebugAgentHooks("Pre-process agent"),
 )

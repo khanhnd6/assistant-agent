@@ -142,7 +142,7 @@ def dynamic_research_instruction(wrapper: RunContextWrapper[UserContext], agent:
 
 def dynamic_research_instruction_v2(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
     profile = wrapper.context.user_profile
-    region = profile['region'] if profile else ""
+    region = profile['region'] if profile else "Chưa có"
     current_date = None
     if profile:
         user_timezone = pytz.timezone(profile['timezone'])
@@ -151,6 +151,7 @@ def dynamic_research_instruction_v2(wrapper: RunContextWrapper[UserContext], age
     "Làm theo các bước sau:",
     f"1. Đừng để tâm các phần trả lời trước đó (chỉ khi nào bạn bị gọi bởi analysis_agent mới cần quan sát)",
     f"2. BẮT BUỘC tìm bằng Google để tra thông tin. Hiện tại là năm: {current_date[:4]}, tháng: {current_date[4:6]}, ngày: {current_date[6:8]}",
+    f"3. Region của người dùng: {region}. Có thể cần sử dụng nếu họ hỏi những câu hỏi như sau (thời tiết ở chỗ tôi, giá vàng ở gần tôi)",
      "4. Tóm tắt kết quả trực quan, rõ ràng, có chia ý, trình bày dưới <5 câu, kèm theo nguồn đã sử dụng"
     ]   
     return '\n'.join(instructions)
