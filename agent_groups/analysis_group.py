@@ -15,7 +15,7 @@ research_agent = Agent[UserContext](
     # tools=[WebSearchTool(search_context_size="low")],
     tools=[tavily_websearch],
     hooks=DebugAgentHooks(display_name="Research Agent"),
-    model_settings=ModelSettings(tool_choice="required")
+    model_settings=ModelSettings(tool_choice="tavily_websearch")
 )
 
 class PlotOuput(BaseModel):
@@ -44,8 +44,10 @@ plot_agent = Agent[UserContext](
     tools=[plot_records_tool],
     hooks=DebugAgentHooks(display_name="Plot Agent"),
     output_type=PlotOuput,
-    model_settings=ModelSettings(tool_choice="required")
+    model_settings=ModelSettings(tool_choice="plot_records_tool")
 )
+
+plot_agent.tool_use_behavior="stop_on_first_tool"
 
 aggregation_agent = Agent[UserContext](
     name="aggregation_agent",

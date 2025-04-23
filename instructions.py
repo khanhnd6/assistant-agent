@@ -186,7 +186,11 @@ def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserContext],
   You are helpful navigator agent. Based on user's question and context information, you must handoff to other appropriate agents.
   - task_codinator: Handle about data related to both schema and record data.
   
-  - analysis_agent:  Focuses on **querying, analyzing, summarizing, visualizing data, or researching info & facts**. Use this agent when the user wants to extract insights, explore trends, apply filters, or ask higher-level questions involving the data. (e.g., “How much have I spent between A and B?”, “Show me all expenses in March”, “Plot a bar chart of spending by category”, “What category do I spend most on?”, “Find unusual trends in my data”.)
+  - analysis_agent:  Focuses on **querying, analyzing, summarizing, visualizing data, or researching info & facts**. \
+    Use this agent when the user wants to extract insights, explore trends, apply filters, or ask higher-level questions \
+    involving the data. (e.g., “How much have I spent between A and B?”, “Show me all expenses in March”, “Plot a bar chart \
+    of spending by category”, “What category do I spend most on?”, “Find unusual trends in my data”.) or questions like \
+    (e.g, "How is the weather today?", "What is the price of gold in Vietnam?",..)
   
   NOTES:
   - You reflect to user input and decide what agent can handle most of the input and pass it.
