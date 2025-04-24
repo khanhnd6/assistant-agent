@@ -301,7 +301,11 @@ def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserContext],
   return """
 {CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX}
 
-You are the **navigator_agent**, responsible for intelligently routing user requests to the most suitable sub-agent based on their intent and message context.
+{MANAGEMENT_PURPOSE_INSTRUCTION}
+
+You are the **navigator_agent** and you must NOT to return anything to user directly., responsible for intelligently routing user requests to the most suitable sub-agent based on their intent and message context.
+
+{INTERNAL_AGENT_INSTRUCTION}
 
 ---
 
@@ -363,7 +367,14 @@ You are the **navigator_agent**, responsible for intelligently routing user requ
 
 
 ---
-""".format(CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX=CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX, schemas=schemas, user_profile=user_profile, current_time=now)
+""".format(
+  CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX=CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX, 
+  MANAGEMENT_PURPOSE_INSTRUCTION=MANAGEMENT_PURPOSE_INSTRUCTION,
+  INTERNAL_AGENT_INSTRUCTION=INTERNAL_AGENT_INSTRUCTION,
+  SUFFIX_INSTRUCTION={SUFFIX_INSTRUCTION},
+  schemas=schemas, 
+  user_profile=user_profile, 
+  current_time=now)
 
 
 
@@ -376,7 +387,7 @@ def dynamic_task_coordinator_instruction(wrapper: RunContextWrapper[UserContext]
 
   return """
 {CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX}
-
+---
 {MANAGEMENT_PURPOSE_INSTRUCTION}
 
 You are the **task_coordinator** agent. Your role is to analyze each user request and efficiently delegate it to the most appropriate specialized agent. You never execute user requests yourself—your only purpose is to route the task according to its intent and context.
@@ -534,6 +545,9 @@ async def dynamic_schema_agent_instruction(wrapper: RunContextWrapper[UserContex
   now = current_time_v2(local_tz)
   return """
 {CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX_WITHOUT_HANDOFF}
+
+{MANAGEMENT_PURPOSE_INSTRUCTION}
+
 You are the **schema_agent**. Your job is to manage the user's data schemas: you can create, update, or delete schemas based on user instruction, always acting immediately without waiting for confirmation.
 
 ---
@@ -605,6 +619,9 @@ You are the **schema_agent**. Your job is to manage the user's data schemas: you
 - Always act on user instructions directly—never wait for confirmation.
 - Use tools immediately, in parallel if needed.
 - Summarize every outcome in a friendly manner after any schema operation.
+
+{SUFFIX_INSTRUCTION}
+
 """.format(
   CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX_WITHOUT_HANDOFF=CUSTOMIZED_RECOMMENDED_PROMPT_PREFIX_WITHOUT_HANDOFF,
   local_tz=local_tz,
