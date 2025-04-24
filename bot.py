@@ -8,7 +8,7 @@ from chat_v2 import chat
 import os
 import asyncio
 import pytz
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 # import logging
 from jobs import send_notifications
 
@@ -300,6 +300,10 @@ async def auto_message(context: CallbackContext):
         return
     except Exception as e:
         print(f"Lỗi khi gửi tin nhắn: {e}")
+
+def next_full_minute(tz=timezone.utc):
+    now = datetime.now(tz)
+    return now.replace(second=0, microsecond=0) + timedelta(minutes=1)
         
 if __name__ == "__main__":
     app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
@@ -308,6 +312,6 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("mytimezone", handle_get_time_zone))
     app.add_handler(MessageHandler(filters.LOCATION, handle_location))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.job_queue.run_repeating(auto_message, interval=SCHEDULER)
+    app.job_queue.run_repeating(auto_message, interval=SCHEDULER, first=next_full_minute())
     print(f"🤖 Bot đang chạy và sẽ kiểm tra thông báo mỗi {SCHEDULER} giây")
     app.run_polling()
