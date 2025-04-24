@@ -1,19 +1,22 @@
 from group.context_tool import retrieve_user_profile, retrieve_display_schemas
 from group.navigator.navigator_context import UpdateProfile
 from agents import Agent, RunContextWrapper, FunctionTool
-from utils.context import UserContext, UserProfile
+from utils.date import convert_date, current_time_v3
 from utils.database import MongoDBConnection
-from utils.date import convert_date
+from utils.context import UserContext
 from group.prompt import *
 import pytz
 
 async def dynamic_greeting_agent_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
+  profile = wrapper.context.user_profile
+  current = current_time_v3(profile["timezone"]) if profile else current_time_v3()
   instruction = f"""
     {STANDALONE_PREFIX_PROMPT}
     Your mission is to warmly greet the user and spark interactive, delightful conversations
     - Modify the response to be more polite and natural, without directly referencing the user's interests 100% of the time: {retrieve_user_profile(wrapper)}
     - Include emoji or a touch of humor in your response.
     - After greeting, always invite the user to take an action, ask a question, or explore a feature.
+    - Here is also current time for you: {current}
   """
   return instruction
 
@@ -26,7 +29,7 @@ async def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserCon
     - schema_agent: initialize a new data schema for saving and structuring user records. Never call this for making user profile schema.
       Examples: “I want to take notes”, “I'm ready to set up a planner”, "create table for planning",..
     - greeting_agent: andles casual greetings, small talks, talk about dob, region, favorite things, bla bla.
-      Examples: “Good morning!”, “How are you?”, "Hello"
+      Examples: “Good morning!”, “How are you?”, "Hello", "What time is this,.."
     - record_agent: CRUD user's records and information that have been saved.
       Examples: "I want to note..", "Save my plan.."
   """
@@ -56,22 +59,34 @@ async def update_user_profile(wrapper: RunContextWrapper[UserContext], args: str
         parsed = UpdateProfile.model_validate_json(args)
         parsed_obj = parsed.model_dump()
         user_id = wrapper.context.user_id
+
         connection = MongoDBConnection()
         db = connection.get_database()
         collection = db["USER_PROFILES"]
-        if parsed_obj["name"] in ("user_name", "region"):
-           collection.update_one({"user_id": user_id}, {"$set": {parsed_obj["name"]: str(parsed_obj["value"])}})
-        elif parsed_obj["name"] == "timezone":
-            timezone = parsed_obj["value"]
-            if timezone not in pytz.all_timezones: assert(f"Invalid timezone: '{timezone}' — must be a valid IANA timezone name (e.g., 'Asia/Ho_Chi_Minh').")
-            collection.update_one({"user_id": user_id}, {"$set": {"timezone": parsed_obj["value"]}})
-        elif parsed_obj["name"] in ("dob"):
-           collection.update_one({"user_id": user_id}, {"$set": {"dob": convert_date(parsed_obj["value"])}})
+
+        field = parsed_obj["name"]
+        value = parsed_obj["value"]
+
+        if field in ("user_name", "region"):
+            collection.update_one({"user_id": user_id}, {"$set": {field: str(value)}})
+
+        elif field == "timezone":
+            if value not in pytz.all_timezones:
+                raise ValueError(f"Invalid timezone: '{value}' — must be a valid IANA timezone name (e.g., 'Asia/Ho_Chi_Minh').")
+            collection.update_one({"user_id": user_id}, {"$set": {"timezone": value}})
+
+        elif field == "dob":
+            collection.update_one({"user_id": user_id}, {"$set": {"dob": convert_date(value)}})
         else:
-           collection.update_one({"user_id": user_id}, {"$addToSet": {parsed_obj["name"]: parsed_obj["value"]}})
+            doc = collection.find_one({"user_id": user_id}, {field: 1})
+            if doc is None or not isinstance(doc.get(field, []), list):
+                collection.update_one({"user_id": user_id}, {"$set": {field: []}})
+            collection.update_one({"user_id": user_id},
+                                  {"$addToSet": {field: value}})
+
         connection.close_connection()
         return "Successfully updated"
-        
+
     except Exception as e:
         return f"Error happened - {str(e)}"
 

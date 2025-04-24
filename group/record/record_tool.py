@@ -19,7 +19,8 @@ async def dynamic_action_agent_instruction(wrapper: RunContextWrapper[UserContex
     Bạn là người thực hiện công việc theo mô tả job brief. Job brief sẽ gồm các trường: schema_name, action, request.
     Trong lúc thực hiện, NGHIÊM CẤM hỏi hay yêu cầu xác nhận từ người dùng. Khi thực hiện xong, báo lại kết quả của bạn.
 
-    1. Đầu tiên, gọi `retrieve_records_tool` đúng 1 lần duy nhất với schema_name, để:
+    1. Đầu tiên, gọi `retrieve_records_tool` ĐÚNG 1 LẦN DUY NHẤT với schema_name, để:
+       - Nếu tool trả về không có dữ liệu thì dừng lại, không được gọi nữa. Tóm lại chỉ gọi đúng 1 lần duy nhất
        - Kiểm tra xem đã có dữ liệu y hệt hoặc lặp lại chưa. Nếu có thì cấm tạo mới, chỉ lấy ra record_id.
        - (Nếu cần) Lấy ra record_id của dòng dữ liệu đang cần update hoặc delete
        - Nhìn để hiểu cấu trúc dữ liệu khi chuẩn bị tạo dòng dữ liệu mới 

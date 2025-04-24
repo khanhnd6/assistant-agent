@@ -8,6 +8,7 @@
 **/.idea
 **/.next
 **/.vscode
+**/myenv
 **/compose.*.yaml
 **/compose.*.yml
 **/compose.yaml
@@ -25,3 +26,4 @@ defang
 defang.exe
 # Ignore our project-level state
 .defang
+myenv/
