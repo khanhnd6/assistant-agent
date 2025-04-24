@@ -57,7 +57,7 @@ record_agent = Agent[UserContext](
             tool_name="schema_tool",
             tool_description="Tool to execute schema-related request",
             custom_output_extractor=schema_tool_custom_output_extractor)],
-    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="retrieve_records_tool", temperature=0.6),
+    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="required", temperature=0.2),
     hooks=DebugAgentHooks("Record Agent")
 )
 
@@ -69,7 +69,7 @@ task_coordinator = Agent[UserContext](
     instructions=dynamic_task_coordinator_instruction,
     handoffs = [record_agent, schema_agent],
     tools=[],
-    model_settings=ModelSettings(temperature=0),
+    model_settings=ModelSettings(temperature=0.5),
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
 task_coordinator_handoff = handoff(agent=task_coordinator)
@@ -105,7 +105,7 @@ navigator_agent = Agent[UserContext](
     handoffs=[task_coordinator_handoff, analysis_agent_handoff],
     output_type=NavigationCommand,
     hooks=DebugAgentHooks("Navigator Agent"),
-    model_settings= ModelSettings(temperature=0)
+    model_settings= ModelSettings(temperature=0.5)
 )
 
 navigator_agent_handoff = handoff(agent=navigator_agent)
