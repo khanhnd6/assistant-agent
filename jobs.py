@@ -83,7 +83,7 @@ async def send_notifications(minutes=10):
             "_send_notification_at": {"$gte": now, "$lt": boundaries}
         }
 
-        print("📩 Job starting at:", now, "| Searching until:", boundaries)
+        print("📩 Job starting at:", now, "| Searching before:", boundaries)
 
         records_cursor = db["RECORDS"].find(query)
         schemas_cursor = db["SCHEMAS"].find()
@@ -109,28 +109,23 @@ async def send_notifications(minutes=10):
             user_id = str(record["_user_id"])
             schema_name = record.get("_schema_name")
             schema = schema_map.get((user_id, schema_name), {})
-
-            if schema:  # Nếu có schema thì lấy theo field_map như trước
-                field_map = {
-                    field["name"]: field["display_name"]
-                    for field in schema.get("fields", [])
-                }
-                clean_data = {
-                    field_map.get(k, k): v
-                    for k, v in record.items()
-                    if not k.startswith("_") and k in field_map
-                }
-                display_name = schema.get("display_name", schema_name)
-            else:  # Nếu không có schema
-                clean_data = {
-                    beautify_field_name(k): v
-                    for k, v in record.items()
-                    if not k.startswith("_")
-                }
+            result = {}
+            if schema:
+                field_map = {}
+                for field in schema.get("fields", []): field_map[field["name"]] = field["display_name"]
+                for key, value in record.items():
+                    if key.startswith("_"): continue
+                    if key in field_map:
+                        result[field_map[key]] = value
+                    else:
+                        result[beautify_field_name(key)] = value
+                display_name = schema.get("display_name")
+            else:
+                for key, value in record.items():
+                    if not key.startswith("_"):
+                        result[beautify_field_name(key)] = value
                 display_name = "Note"
-
-            if clean_data:
-                collection[user_id].append((display_name, clean_data))
+            collection[user_id].append((display_name, result))
 
         messages = defaultdict(str)
 
@@ -177,7 +172,6 @@ async def send_notifications(minutes=10):
 #         "note": "Thông báo lại sau 4 phút.",
 #         "_user_id": 8138225670,
 #         "_record_id": "f07b4a66-2619-4565-8476-a3252a037e2a",
-#         "_schema_name": "expenditure",
 #         "_send_notification_at": send_time,
 #         "_deleted": False
 #     })

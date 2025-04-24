@@ -1,7 +1,8 @@
-from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+from typing import Literal, Optional
+from utils.context import BaseSchema
 
-class PlotArgs(BaseModel):
+class PlotArgs(BaseSchema):
     records: str = Field(description=""" JSON array of object.Example: 
         [
             { "ticker": "AAPL", "price": 175, "volume": 10000 },
@@ -12,9 +13,6 @@ class PlotArgs(BaseModel):
     x: Optional[str] = Field(description="Name of the X-axis column")
     y: Optional[str] = Field(description="Name of the Y-axis column")
     chart_type: Literal["line", "bar", "pie"] = Field(description="The type of chart to be drawn")
-    model_config = {"json_schema_extra": {"additionalProperties": False}}
-    
-    
 
 class WebSearchInput(BaseModel):
     query: str = Field(..., min_length=1, max_length=500, description="The search query for Tavily")

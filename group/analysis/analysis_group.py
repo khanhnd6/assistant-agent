@@ -1,18 +1,16 @@
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
-from agents import Agent, WebSearchTool, ModelSettings
-from agent_groups.analysis_tool import *
+from agents import Agent, ModelSettings
+from group.analysis.analysis_tool import *
 from utils.hook import DebugAgentHooks
 from utils.context import UserContext
 from pydantic import BaseModel
-
-model="gpt-4o-mini"
+from group.model import model
 
 research_agent = Agent[UserContext](
     name="research_agent",
     model=model,
     handoff_description="An agent that can search for real-time data, info through Internet",
     instructions=dynamic_research_instruction_v2,
-    # tools=[WebSearchTool(search_context_size="low")],
     tools=[tavily_websearch],
     hooks=DebugAgentHooks(display_name="Research Agent"),
     model_settings=ModelSettings(tool_choice="tavily_websearch")

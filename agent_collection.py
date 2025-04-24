@@ -1,6 +1,6 @@
 from tools.schema_tools import create_schema_tool, update_schema_tool, delete_schema_tool
 from tools.record_tools import create_record_tool, retrieve_records_tool, delete_record_tool, update_record_tool
-from agent_groups.analysis_group import analysis_agent
+from group.analysis.analysis_group import analysis_agent
 from utils.hook import DebugAgentHooks
 from tools.user_profile_tool import save_user_profile_tool, get_user_profile_from_context_tool
 from agents import Agent, ModelSettings, handoff

@@ -1,23 +1,21 @@
 from agents import Agent, RunContextWrapper, function_tool, FunctionTool
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from utils.data_extensions import remove_first_underscore
-from agent_groups.analysis_context import PlotArgs
 from utils.date import convert_to_local_timezone
+from group.context_tool import retrieve_schemas
+from group.analysis.analysis_context import *
 from utils.database import MongoDBConnection
 from utils.context import UserContext
+from typing import List, Dict, Any
 import matplotlib.pyplot as plt
+from tavily import TavilyClient
+from dotenv import load_dotenv
 from datetime import datetime
 import ujson as json
 import pytz
-from tavily import TavilyClient
-from dotenv import load_dotenv
 import os
-from typing import List, Dict, Any
-from agent_groups.analysis_context import WebSearchInput, SearchResult
-from utils.context import UserContext
 
 load_dotenv()
-
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 @function_tool
@@ -95,6 +93,7 @@ plot_records_tool = FunctionTool(
     name="plot_records_tool",
     description="""
     Generates various types of charts from the data provided, Based on the chart type specified.
+    Please get the right data from context, never generate randomlize data!
     The function returns the file path to the generated chart image.
     """,
     params_json_schema=PlotArgs.model_json_schema(),
@@ -109,36 +108,6 @@ async def get_all_data(wrapper: RunContextWrapper[UserContext], schema_name: str
         {"_id": 0, "_user_id": 0, "_send_notification_at": 0, "_record_id": 0, "_deleted": 0, "_schema_name": 0}
     ))
     return remove_first_underscore(convert_to_local_timezone(records, local_tz=str(wrapper.context.user_profile["timezone"])))
-
-def retrieve_user_profile(wrapper: RunContextWrapper[UserContext]) -> str:
-    user_data = wrapper.context.user_profile
-    dob_str = user_data["dob"] if user_data["dob"] is not None else "Not specified"
-    interests_str = ", ".join(user_data["interests"]) if user_data["interests"] else "None listed"
-    instructions_str = ", ".join(user_data["instructions"]) if user_data["instructions"] else "None"
-    profile = f"""
-        Username: {user_data['user_name']},
-        Region: {user_data['region']},
-        Dob: {dob_str},
-        Interests: {interests_str},
-        Instructions: {instructions_str}
-    """
-    return profile
-
-def retrieve_schemas(wrapper: RunContextWrapper[UserContext]) -> str:
-    schemas = wrapper.context.schemas
-    return [schema['name'] for schema in schemas] if schemas else "Empty"
-
-def dynamic_research_instruction(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
-    instructions = [RECOMMENDED_PROMPT_PREFIX,
-        "When you are transferred, do not refuse the task. Use the following routine:",
-        "2. Use the seach tool and produce only 1 paragraph (<50 words) for the result.",
-        "3. Answer the user's question directly, no need to have additional informations.",
-        "4. Remove all links, URL or hyperlink in your response"
-    ]
-    profile = wrapper.context.user_profile
-    if profile: instructions.insert(1, f"1. Initialize search query based on user's profile (region is important): f{retrieve_user_profile(wrapper)}")
-    else: instructions.insert(1, f"1. Initialize search query based on user's language")
-    return '\n'.join(instructions)
 
 def dynamic_research_instruction_v2(wrapper: RunContextWrapper[UserContext], agent: Agent[UserContext]) -> str:
     profile = wrapper.context.user_profile

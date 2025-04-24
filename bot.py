@@ -3,7 +3,8 @@ from telegram import KeyboardButton, ReplyKeyboardMarkup, Update
 from dotenv import load_dotenv
 from timezonefinder import TimezoneFinder
 from geopy.geocoders import Nominatim
-from chat import chat
+# from chat import chat
+from chat_v2 import chat
 import os
 import asyncio
 import pytz

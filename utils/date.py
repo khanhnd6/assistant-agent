@@ -1,8 +1,7 @@
 from datetime import datetime
 from agents import function_tool
-from dateutil import parser
+from dateutil import parser, tz
 import pytz
-from tzlocal import get_localzone
 
 @function_tool()
 async def current_time(timezone: str = None) -> str:
@@ -64,3 +63,28 @@ def convert_to_local_timezone(data, local_tz, as_string=True, format_str="%Y-%m-
         return local_dt.strftime(format_str) if as_string else local_dt
     else: 
         return data
+    
+def convert_date_v2(data, timezone="Asia/Ho_Chi_Minh"):
+    def _apply_tz_keep_wall(dt):
+        target_tz = tz.gettz(timezone)
+        return dt.replace(tzinfo=target_tz)
+    if isinstance(data, dict):
+        return {k: convert_date_v2(v, timezone) for k, v in data.items()}
+    if isinstance(data, list):
+        return [convert_date_v2(item, timezone) for item in data]
+    if isinstance(data, str):
+        try:
+            parsed = parser.isoparse(data)
+            return _apply_tz_keep_wall(parsed)
+        except (ValueError, TypeError):
+            return data
+    return data
+
+def current_time_v3(timezone: str = None) -> str:
+    try:
+        if timezone is None: timezone = "Asia/Ho_Chi_Minh"
+        tz = pytz.timezone(timezone)
+        current_time = datetime.now(tz).strftime("%Y-%m-%d %H:%M")
+        return f"{current_time[11:13]}:{current_time[14:16]} Ngày {current_time[8:10]}, Tháng {current_time[5:7]}, Năm {current_time[:4]}"
+    except pytz.UnknownTimeZoneError:
+        return "Múi giờ không hợp lệ"
