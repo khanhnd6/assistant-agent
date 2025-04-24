@@ -71,9 +71,13 @@ class UserProfileOutput(BaseSchema):
     call_again: bool
 
 
+class NavigationCommand(BaseSchema):
+    recipient_agent_name: str
+    user_request: str
+
 class RecordCommand(BaseSchema):
     schema_name: str
-    action: Literal["create", "update", "delete", None]
+    action: Literal["create", "update", "delete", "read", None]
     existed: bool
     command: str
 
