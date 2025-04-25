@@ -13,6 +13,9 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 REDIS_EXPERATION_IN = 1800
 r = RedisCache()
 r.clear()
+m = MongoDBConnection()
+# m.wipeout()
+# m.close_connection()
 
 async def chat(message: str, user_id: int, is_sys_message = False):
     try:
@@ -45,7 +48,6 @@ async def chat(message: str, user_id: int, is_sys_message = False):
         return clean_text
 
     except Exception as ex:
-        print(f"Error in chat: {str(ex)}")
-        return "Error happened, please try again!"
+        raise f"Error in chat: {str(ex)}"
 
 

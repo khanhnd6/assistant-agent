@@ -70,30 +70,41 @@ async def create_records(wrapper: RunContextWrapper[UserContext], args: str) -> 
     try:
         parsed = DataEntry.model_validate_json(args)
         parsed_data = parsed.model_dump()
-        
         user_id = wrapper.context.user_id
-        
-        data = json.loads(parsed_data['data'])
-        
+        data = json.loads(parsed_data["data"])
+
+        # ----- Thêm các trường system -----
         data["_user_id"] = user_id
-        data["_record_id"] = str(uuid.uuid4()) 
+        data["_record_id"] = str(uuid.uuid4())
         data["_schema_name"] = parsed_data["schema_name"]
         data["_send_notification_at"] = parsed_data["send_notification_at"]
         data["_deleted"] = False
-        
+
+        # ----- Chuyển đổi ngày tháng theo timezone -----
         profile = wrapper.context.user_profile
         timezone = profile["timezone"] if profile else "Asia/Ho_Chi_Minh"
         data = convert_date_v2(data, timezone)
+
+        # ----- Lưu vào MongoDB -----
         mongodb_connection = MongoDBConnection()
         db = mongodb_connection.get_database()
-        user_collection = db['RECORDS']
-        
-        result = user_collection.insert_one(data)
-        mongodb_connection.close_connection() 
-        
-        return f'Success, Data: {data}'
+        user_collection = db["RECORDS"]
+        user_collection.insert_one(data)
+        mongodb_connection.close_connection()
+
+        # ----- Tạo bản sao chỉ chứa các trường không gạch dưới,
+        #       ngoại trừ _send_notification_at -----
+        public_view = {
+            k: v
+            for k, v in data.items()
+            if (not k.startswith("_")) or k == "_send_notification_at"
+        }
+
+        return f"Success, Data: {public_view}"
+
     except Exception as e:
-        return f'Error {str(e)}'
+        # Bạn có thể muốn ghi log chi tiết hơn ở đây
+        return f"Error: {e}"
 
 create_record_tool = FunctionTool(
     name="create_record_tool",
@@ -154,14 +165,14 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
         records = convert_to_local_timezone(records, timezone)        
         records = remove_first_underscore(records)
         records = remove_empty_values(records)
-        return str(records) if records else "This schema has no data yet. Agent please stop calling this tool!"
+        return str(records) if records else "Schema này chưa có dữ liệu. Vui lòng dừng gọi NGAY LẬP TỨC và chuyển sang bước khác"
     except Exception as e:
         return f"Error in retrieving data - {e}"
 
 retrieve_records_tool = FunctionTool(
     name="retrieve_records_tool",
     description="""
-   You can just use this tool if you got a schema_name.
+   You can just use this tool if you got a schema_name. And just call it one time
    This tool will return data of target schema and accepts only data structure like this:
    {
       "schema_name": "The REAL name of the schema, not `display_name`"

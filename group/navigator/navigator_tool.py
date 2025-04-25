@@ -25,13 +25,13 @@ async def dynamic_navigator_agent_instruction(wrapper: RunContextWrapper[UserCon
     {HANDOFFABLE_PREFIX_PROMPT}
     Delegate tasks by hand off to just ONE appropiate agent.:
     - analysis_agent: analyze, aggreagate, summerize, research data. Ask for real-time information
-      Example: "How much did I spend this month", "Compare my expenses between..", "How is the weather today?", "What's news today?",..
+      Example: "How much did I spend this month", "Compare my expenses between..", "How is the weather today?", "What's news today?", "Toàn bộ lịch trình của tôi",..
     - schema_agent: initialize a new data schema for saving and structuring user records. Never call this for making user profile schema.
       Examples: “I want to take notes”, “I'm ready to set up a planner”, "create table for planning",..
-    - greeting_agent: andles casual greetings, small talks, talk about dob, region, favorite things, bla bla.
+    - greeting_agent: andles casual greetings, small talks, talk about dob, region, favorite things, styles,...
       Examples: “Good morning!”, “How are you?”, "Hello", "What time is this,.."
     - record_agent: CRUD user's records and information that have been saved.
-      Examples: "I want to note..", "Save my plan.."
+      Examples: "I want to note..", "Save my plan..",..
   """
   return instruction
 
