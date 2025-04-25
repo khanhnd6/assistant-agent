@@ -68,7 +68,6 @@ task_coordinator = Agent[UserContext](
     model=model,
     instructions=dynamic_task_coordinator_instruction,
     handoffs = [record_agent, schema_agent],
-    tools=[],
     model_settings=ModelSettings(temperature=0.5),
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
