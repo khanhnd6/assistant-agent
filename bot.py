@@ -43,10 +43,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "user_name": user_name,
             "dob": None,
             "region": None,
-            "styles": None,
-            "interests": None,
+            "styles": [],
+            "interests": [],
             "timezone": None,
-            "instructions": None
+            "instructions": [],
         }
         collection.insert_one(new_profile)
         location_button = KeyboardButton("📍 Share location", request_location=True)
@@ -112,10 +112,10 @@ async def handle_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "user_name": user_name,
             "dob": None,
             "region": None,
-            "styles": None,
-            "interests": None,
+            "styles": [],
+            "interests": [],
             "timezone": tz_name,
-            "instructions": None
+            "instructions": []
         }
         collection.insert_one(new_profile)
     
@@ -186,10 +186,10 @@ async def handle_set_time_zone(update: Update, context: ContextTypes.DEFAULT_TYP
             "user_name": user_name,
             "dob": None,
             "region": None,
-            "styles": None,
-            "interests": None,
+            "styles": [],
+            "interests": [],
             "timezone": tz_name,
-            "instructions": None
+            "instructions": []
         }
         collection.insert_one(new_profile)
     
@@ -232,10 +232,10 @@ async def handle_get_time_zone(update: Update, context: ContextTypes.DEFAULT_TYP
             "user_name": user_name,
             "dob": None,
             "region": None,
-            "styles": None,
-            "interests": None,
+            "styles": [],
+            "interests": [],
             "timezone": None,
-            "instructions": None
+            "instructions": []
         }
         collection.insert_one(new_profile)
         await update.message.reply_text(

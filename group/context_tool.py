@@ -3,14 +3,16 @@ from utils.context import UserContext
 import copy
 
 def retrieve_user_profile(wrapper: RunContextWrapper[UserContext]) -> str:
-    user_data = wrapper.context.user_profile
-    dob_str = user_data["dob"] if user_data["dob"] is not None else "Not specified"
-    interests_str = ", ".join(user_data["interests"]) if user_data["interests"] else "None listed"
-    instructions_str = ", ".join(user_data["instructions"]) if user_data["instructions"] else "None"
-    timezone_str = user_data["timezone"] if user_data["timezone"] else "None"
+    profile = wrapper.context.user_profile
+    user_name = profile["user_name"] if profile is not None else "Not specified"
+    dob_str = profile["dob"] if profile is not None else "Not specified"
+    interests_str = ", ".join(profile["interests"]) if profile else "None listed"
+    instructions_str = ", ".join(profile["instructions"]) if profile else "None"
+    timezone_str = profile["timezone"] if profile else "None"
+    region = profile["region"] if profile else "None"
     profile = f"""
-        Username: {user_data['user_name']},
-        Region: {user_data['region']},
+        Username: {user_name},
+        Region: {region},
         Dob: {dob_str},
         Interests: {interests_str},
         Instructions: {instructions_str},

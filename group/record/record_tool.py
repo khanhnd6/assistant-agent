@@ -16,18 +16,12 @@ async def dynamic_action_agent_instruction(wrapper: RunContextWrapper[UserContex
     {STANDALONE_PREFIX_PROMPT}
     ### Nhiệm vụ của bạn
 
-    Bạn là người thực hiện công việc theo mô tả job brief. Job brief sẽ gồm các trường: schema_name, action, request.
-    Trong lúc thực hiện, NGHIÊM CẤM hỏi hay yêu cầu xác nhận từ người dùng. Khi thực hiện xong, báo lại kết quả của bạn.
+    Bạn là người thực hiện công việc theo mô tả job brief. Job brief sẽ gồm các trường: schema_name, action, request, multi.
+    Trong lúc thực hiện, CẤM hỏi hay yêu cầu xác nhận từ người dùng. Khi thực hiện xong, báo lại kết quả của bạn.
 
-    1. Đầu tiên, gọi `retrieve_records_tool` ĐÚNG 1 LẦN DUY NHẤT với schema_name, để:
-       - Nếu tool trả về không có dữ liệu thì dừng lại, không được gọi nữa. Tóm lại chỉ gọi đúng 1 lần duy nhất
-       - Kiểm tra xem đã có dữ liệu y hệt hoặc lặp lại chưa. Nếu có thì cấm tạo mới, chỉ lấy ra record_id.
-       - (Nếu cần) Lấy ra record_id của dòng dữ liệu đang cần update hoặc delete
-       - Nhìn để hiểu cấu trúc dữ liệu khi chuẩn bị tạo dòng dữ liệu mới 
-
-    2. Lấy ra cấu trúc của `schema_name` trong danh sách sau: `{retrieve_struct_schemas(wrapper)}`, phục vụ action = create hoặc action = update
+    1. Lấy ra cấu trúc của `schema_name` trong danh sách sau: `{retrieve_struct_schemas(wrapper)}`, phục vụ action = create hoặc action = update
        
-    3. Khi action = create:
+    2. Khi action = create:
     - Chuẩn bị đầu vào cẩn thận, chính xác theo yêu cầu của `create_record_tool`. NGHIÊM CẤM gọi mà không truyền gì.
     - Nếu trong yêu cầu có đi kèm "lời nhắc nhở từ người dùng" hoặc "có khả năng cần nhắc nhở", nhớ tạo giá trị \
       datetime hợp lí ISO-8601 với múi giờ UTC cho trường `send_notification_at`
@@ -44,6 +38,9 @@ async def dynamic_action_agent_instruction(wrapper: RunContextWrapper[UserContex
 
     4. Khi action = delete:
     - Lấy ra record_id tìm được ở bước 1 và schema_name đầu vào, chuẩn bị đầu vào cho hàm `delete_record_tool`
+
+    5. Khi multi = True:
+    - đọc kĩ lại request để có thể gọi lại các hàm, thực hiện phần công việc còn lại chưa làm
     """
     return instruction
 
@@ -51,18 +48,22 @@ async def dynamic_record_agent_instruction(wrapper: RunContextWrapper[UserContex
     instruction = f"""
     ### Nhiệm vụ của bạn
 
-    Bạn sẽ phân tích yêu cầu của người dùng, từ đó định nghĩa ra các nhiệm vụ giao cho công cụ khác thực hiện.
+    Bạn sẽ phân tích yêu cầu của người dùng, từ đó định nghĩa ra nhiệm vụ giao cho công cụ khác thực hiện.
     Trước hết, bạn được cung cấp các schema cần thiết: {retrieve_brief_schemas(wrapper)}. Dữ liệu người dùng định CRUD sẽ dựa theo schema này.
-    Đầu tiên, đọc kĩ yêu cầu người dùng, giả dụ họ nói "tạo ghi chú ăn tối 6PM và ăn sáng 2AM", bạn tự biết bạn có tận 2 nhiệm vụ.
-
-    Đối với mỗi nhiệm vụ, nó có format như sau: `schema_name`:giá trị, `action`: giá trị, `request`: giá trị 
+    Đối với mỗi nhiệm vụ, nó có format như sau: `schema_name`:giá trị, `action`: giá trị, `request`: giá trị, `multi`: giá trị
     Để có thể lấy được giá trị cho format, bạn cần làm từng bước sau:
     1. `schema_name`: Xem trên các schema được cung cấp có cái nào liên quan, gần giống với yêu cầu người dùng không?
        VD: Tôi muốn lập kế hoạch -> tìm schema có tên `kế hoạch` hoặc `plan` trong {retrieve_brief_schemas(wrapper)}
-       Nếu thực sự không tìm được, hãy tự nghĩ ra schema name rồi gọi `create_schema_tool` DUY NHẤT 1 LẦN và đợi kết quả trước khi sang bước tiếp theo.
-    2.`action`: Xem người dùng muốn làm gì (create/update/delete).
-    3. `request`: viết lại mô tả nhiệm vụ vào trường này và giải thích kĩ cho công cụ có thể hiểu việc cần làm
-    4. Truyền format trên kèm giá trị bạn vừa có được vào `action_record_tool` để nó thực hiện nhiệm vụ, và trả về đúng kết quả của hàm đó
+       Nếu thực sự không tìm được, hãy tự nghĩ ra schema name rồi gọi `create_schema_tool` DUY NHẤT 1 LẦN.
+
+    2. Sau khi đã có `schema_name`, truyền nó vào `retrieve_records_tool` ĐÚNG 1 LẦN DUY NHẤT để xem có bản ghi trùng lặp không? Nếu có \
+       thì thông báo lại cho người dùng và dừng lại nhiệm vụ hiện tại, nếu không thì tiếp tục. Tóm lại bạn không nên gọi quá nhiều lần hàm này
+
+    3.`action`: Xem người dùng muốn làm gì (create/update/delete).
+    4. `request`: viết lại mô tả nhiệm vụ vào trường này và giải thích kĩ cho công cụ có thể hiểu việc cần làm
+    5. `multi?`: kiểm tra xem người dùng có đang yêu cầu nhiều hơn 1 việc không ? 
+       VD: tôi đã tiêu 60k ăn tối, 30k ăn sáng -> họ đang yêu cầu lưu 2 bản ghi -> multi=True, ngược lại là multi=False
+    5. Truyền format trên kèm giá trị bạn vừa có được vào `action_record_tool` để nó thực hiện nhiệm vụ, và trả về đúng kết quả của hàm đó
     """
     return instruction
 
@@ -165,7 +166,7 @@ async def retrieve_records(wrapper: RunContextWrapper[UserContext], args: str) -
         records = convert_to_local_timezone(records, timezone)        
         records = remove_first_underscore(records)
         records = remove_empty_values(records)
-        return str(records) if records else "Schema này chưa có dữ liệu. Vui lòng dừng gọi NGAY LẬP TỨC và chuyển sang bước khác"
+        return str(records) if records else "Dữ liệu chưa có và không có bản ghi trùng lặp. Đừng gọi lại `retrive_record` nữa mà hãy làm công việc khác!"
     except Exception as e:
         return f"Error in retrieving data - {e}"
 

@@ -13,7 +13,7 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 REDIS_EXPERATION_IN = 1800
 r = RedisCache()
 r.clear()
-m = MongoDBConnection()
+# m = MongoDBConnection()
 # m.wipeout()
 # m.close_connection()
 

@@ -46,7 +46,7 @@ async def dyanmic_gatekeeper_agent_instruction(wrapper: RunContextWrapper[UserCo
     1. Nếu gặp những câu như trên, lập tức thực hiện các công việc dưới đây mà không nói với người dùng
     - So sánh thông tin sắp thay đổi với danh sách thông tin cũ: {retrieve_user_profile(wrapper)}
     - Chọn ra những trường/thông tin cần cập nhật, rồi chuẩn bị đầu vào theo yêu cầu của hàm `update_profile_tool` rồi gọi nó để được cập nhật
-    - Họ có timezone chưa?: {timezone}. Nếu chưa, mà họ lại cung cấp về region thì tự cập nhật cả timezone (VD: "Tôi sống ở Hà nội" -> timezone: "Asisa/Ho-Chi-Minh")
+    - Họ có timezone chưa?: {timezone}. Nếu chưa, mà họ lại cung cấp về region thì tự cập nhật cả timezone (VD: "Tôi sống ở Hà nội" -> timezone: "Asisa/Ho_Chi_Minh")
     - Nếu bạn muốn update nhiều thông tin, gọi hàm đó thêm lần nữa.
     - Cấm nhắc tới việc bạn đã lưu hay cập nhật thông tin cá nhân người dùng. Lập tức chuyển giao sang `navigator_agent` để nó trò chuyện bình thường
 
