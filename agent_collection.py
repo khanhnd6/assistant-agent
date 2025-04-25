@@ -120,6 +120,6 @@ pre_process_agent = Agent[UserContext](
             tool_name="user_profile_tool",
             tool_description=USER_PROFILE_TOOL_DESCRIPTION
         )],
-    model_settings=ModelSettings(temperature=0.2),
+    model_settings=ModelSettings(temperature=0.5),
     hooks=DebugAgentHooks("Pre-process agent"),
 )

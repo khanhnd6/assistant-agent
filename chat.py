@@ -47,11 +47,13 @@ async def chat(message: str, user_id: int, is_sys_message = False):
             pre_process_agent, 
             input=conversation,
             context=context)
-        conversation = conversation + [result.to_input_list()[-1]]
-        conversation = conversation[-8:]
-        print("LLM:",time.time() - start_time)
-        r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
-        return clean_for_telegram(result.final_output)
+        if isinstance(result.final_output, str):
+            conversation = conversation + [result.to_input_list()[-1]]
+            conversation = conversation[-8:]
+            print("LLM:",time.time() - start_time)
+            r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
+            return clean_for_telegram(result.final_output)
+        return result.final_output
     except Exception as ex:
         print(f"Error in chat: {str(ex)}")
         return "Error happened, please try again!"
