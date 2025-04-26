@@ -24,6 +24,8 @@ async def create_schema(wrapper: RunContextWrapper[UserContext], args: str) -> A
             user_schemas.insert_one(schema)
         mongodb_connection.close_connection()
         
+        wrapper.context.schemas.append(schema)
+        
         return ActionResult(is_success=True, message="", data=str(schema))
     except Exception as e:
         return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)
@@ -44,6 +46,12 @@ async def update_schema(wrapper: RunContextWrapper[UserContext], args: str) -> A
             {"$set": schema}
         )
         mongodb_connection.close_connection()
+        
+        for ct in wrapper.context.schemas:
+            if ct["name"] == schema["name"]:
+                ct = schema
+                break
+        
         return ActionResult(is_success=True, message="", data=str(schema))
     except Exception as e:
         return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)
@@ -57,6 +65,10 @@ async def delete_schema(wrapper: RunContextWrapper[UserContext], info: str) -> A
         user_schemas = db["SCHEMAS"]
         user_schemas.update_one({"user_id": user_id, "name": info["name"]}, {"$set": {"deleted": True}})
         
+        mongodb_connection.close_connection()
+        
+        wrapper.context.schemas = [schema for schema in wrapper.context.schemas if schema["name"] != info["name"]]
+         
         return ActionResult(is_success=True, message="Deleted", data=None)
     except Exception as e:
         return ActionResult(is_success=False, message=f"Error: {str(e)}", data=None)

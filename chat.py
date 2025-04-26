@@ -1,4 +1,4 @@
-from agents import Runner, set_tracing_export_api_key
+from agents import Runner, RunConfig, set_tracing_export_api_key
 from utils.database import MongoDBConnection, RedisCache
 from agent_collection import pre_process_agent
 from utils.context import UserContext
@@ -12,7 +12,6 @@ set_tracing_export_api_key(os.getenv("OPENAI_API_KEY"))
 
 REDIS_EXPERATION_IN = 1800 # 30 mins
 r = RedisCache()
-# r.clear()
 
 def clean_for_telegram(text):
     # Thay ký tự theo yêu cầu
@@ -20,6 +19,7 @@ def clean_for_telegram(text):
     return text
 
 async def chat(message: str, user_id: int, is_sys_message = False):
+
     try:
         start_time = time.time()
         conversation = []
@@ -46,10 +46,12 @@ async def chat(message: str, user_id: int, is_sys_message = False):
         result = await Runner.run(
             pre_process_agent, 
             input=conversation,
-            context=context)
+            context=context,
+            run_config=RunConfig(workflow_name="TEST")
+            )
         if isinstance(result.final_output, str):
             conversation = conversation + [result.to_input_list()[-1]]
-            conversation = conversation[-8:]
+            conversation = conversation[-10:]
             print("LLM:",time.time() - start_time)
             r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
             return clean_for_telegram(result.final_output)

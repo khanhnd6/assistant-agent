@@ -24,26 +24,27 @@ record_action_agent = Agent[UserContext](
     model=model,
     instructions=dynamic_record_action_agent_instruction,
     tools=[create_record_tool, delete_record_tool, update_record_tool, retrieve_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.2),
+    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.8, tool_choice="retrieve_records_tool"),
     hooks=DebugAgentHooks("Record Action Agent"),
 )
+
+record_action_agent.reset_tool_choice = True
 
 handoff_record_action = handoff(agent=record_action_agent)
 handoff_record_action.input_json_schema = RecordCommands.model_json_schema()
 
 
-schema_agent_in_record_agent = Agent[UserContext](
-    name="schema_agent_in_record_agent",
+schema_agent_in_single_task_handler = Agent[UserContext](
+    name="schema_agent_in_single_task_handler",
     model=model,
     instructions=dynamic_schema_agent_instruction,
     tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
     model_settings=ModelSettings(temperature=0.5),
     tool_use_behavior="stop_on_first_tool",
-    hooks=DebugAgentHooks("schema_agent_in_record_agent"),
-    output_type=ActionResult
+    hooks=DebugAgentHooks("schema_agent_in_single_task_handler")
 )
 
-async def schema_tool_custom_output_extractor(output):
+async def extract_final_ouput(output):
     return output.final_output 
 
 
@@ -53,26 +54,48 @@ record_agent = Agent[UserContext](
     instructions=dynamic_record_agent_instruction,
     handoffs=[handoff_record_action],
     output_type=RecordCommands,
-    tools=[retrieve_records_tool, schema_agent_in_record_agent.as_tool(
-            tool_name="schema_tool",
-            tool_description="Tool to execute schema-related request",
-            custom_output_extractor=schema_tool_custom_output_extractor)],
+    tools=[retrieve_records_tool],
     model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="required", temperature=0.2),
     hooks=DebugAgentHooks("Record Agent")
 )
 
 record_agent.reset_tool_choice = True
 
+single_task_handler = Agent[UserContext](
+    name="single_task_handler",
+    model=model,
+    instructions=dynamic_single_task_handler_instruction,
+    tools=[
+        schema_agent_in_single_task_handler.as_tool(
+            tool_name="schema_tool",
+            tool_description="Tool to handle a schema-related task",
+            custom_output_extractor=extract_final_ouput
+        ),
+        record_action_agent.as_tool(
+            tool_name="record_tool",
+            tool_description="Tool to handle a record-related task",
+            custom_output_extractor=extract_final_ouput
+        )],
+    model_settings=ModelSettings(temperature=0.5, parallel_tool_calls=False),
+    hooks=DebugAgentHooks("Single task handler")
+)
+
+single_task_handler_tool = single_task_handler.as_tool(
+    tool_name="single_task_handler_tool",
+    tool_description="Tool to handle single user request",
+    custom_output_extractor=extract_final_ouput
+)
+
 task_coordinator = Agent[UserContext](
     name="task_coordinator",
     model=model,
     instructions=dynamic_task_coordinator_instruction,
-    handoffs = [record_agent, schema_agent],
-    model_settings=ModelSettings(temperature=0.5),
+    tools=[single_task_handler_tool],
+    model_settings=ModelSettings(temperature=0.5, parallel_tool_calls=False, tool_choice="required"),
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
-task_coordinator_handoff = handoff(agent=task_coordinator)
-task_coordinator_handoff.input_json_schema = NavigationCommand.model_json_schema()
+
+task_coordinator.reset_tool_choice = True
 
 user_profile_agent = Agent[UserContext](
     name="user_profile_agent",
@@ -91,30 +114,30 @@ greeting_agent = Agent[UserContext](
     hooks=DebugAgentHooks("Greeting Agent"),
 )
 
-greeting_agent_handoff = handoff(agent=greeting_agent)
-greeting_agent_handoff.input_json_schema = NavigationCommand.model_json_schema()
+task_coordinating_tool = task_coordinator.as_tool(
+    tool_name="task_coordinating_tool",
+    tool_description="Tool to do all things related to management tasks",
+    custom_output_extractor=extract_final_ouput
+)
 
-analysis_agent_handoff = handoff(agent=analysis_agent)
-analysis_agent_handoff.input_json_schema = NavigationCommand.model_json_schema()
+analysis_tool = analysis_agent.as_tool(
+    tool_name="analysis_tool",
+    tool_description="Tool to do actions like analyse, aggregate, search, recommend,..."
+)
 
 navigator_agent = Agent[UserContext](
     name="navigator_agent",
     model=model,
     instructions=dynamic_navigator_agent_instruction,
-    handoffs=[task_coordinator_handoff, analysis_agent_handoff],
-    output_type=NavigationCommand,
+    tools=[task_coordinating_tool, analysis_tool],
+    model_settings= ModelSettings(temperature=0.8, parallel_tool_calls=False),
     hooks=DebugAgentHooks("Navigator Agent"),
-    model_settings= ModelSettings(temperature=0.5)
 )
-
-navigator_agent_handoff = handoff(agent=navigator_agent)
-navigator_agent_handoff.input_json_schema = NavigationCommand.model_json_schema()
 
 pre_process_agent = Agent[UserContext](
     name="pre_process_agent",
     instructions=dynamic_pre_process_instruction,
-    handoffs=[navigator_agent_handoff, greeting_agent_handoff],
-    output_type=NavigationCommand,
+    handoffs=[navigator_agent, greeting_agent],
     tools=[user_profile_agent.as_tool(
             tool_name="user_profile_tool",
             tool_description=USER_PROFILE_TOOL_DESCRIPTION
