@@ -76,7 +76,7 @@ single_task_handler = Agent[UserContext](
             tool_description="Tool to handle a record-related task",
             custom_output_extractor=extract_final_ouput
         )],
-    model_settings=ModelSettings(temperature=0.5, parallel_tool_calls=False),
+    model_settings=ModelSettings(temperature=0.2, parallel_tool_calls=False),
     hooks=DebugAgentHooks("Single task handler")
 )
 
@@ -142,6 +142,6 @@ pre_process_agent = Agent[UserContext](
             tool_name="user_profile_tool",
             tool_description=USER_PROFILE_TOOL_DESCRIPTION
         )],
-    model_settings=ModelSettings(temperature=0.5),
+    model_settings=ModelSettings(temperature=0.3),
     hooks=DebugAgentHooks("Pre-process agent"),
 )

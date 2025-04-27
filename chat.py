@@ -46,8 +46,8 @@ async def chat(message: str, user_id: int, is_sys_message = False):
         result = await Runner.run(
             pre_process_agent, 
             input=conversation,
-            context=context,
-            run_config=RunConfig(workflow_name="TEST")
+            context=context
+            # ,run_config=RunConfig(workflow_name="TEST")
             )
         if isinstance(result.final_output, str):
             conversation = conversation + [result.to_input_list()[-1]]
