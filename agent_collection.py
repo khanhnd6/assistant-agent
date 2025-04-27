@@ -14,7 +14,7 @@ record_action_agent = Agent[UserContext](
     model=model,
     instructions=dynamic_record_action_agent_instruction,
     tools=[create_record_tool, delete_record_tool, update_record_tool, retrieve_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.8, tool_choice="retrieve_records_tool"),
+    model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.5, tool_choice="retrieve_records_tool"),
     hooks=DebugAgentHooks("Record Action Agent"),
     reset_tool_choice=True
 )
