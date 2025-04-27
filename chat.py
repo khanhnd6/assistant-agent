@@ -51,7 +51,7 @@ async def chat(message: str, user_id: int, is_sys_message = False):
             )
         if isinstance(result.final_output, str):
             conversation = conversation + [result.to_input_list()[-1]]
-            conversation = conversation[-10:]
+            conversation = conversation[-5:]
             print("LLM:",time.time() - start_time)
             r.set(f"chat-history:{user_id}", json.dumps(conversation), REDIS_EXPERATION_IN)
             return clean_for_telegram(result.final_output)

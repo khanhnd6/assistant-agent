@@ -6,18 +6,8 @@ from tools.user_profile_tool import save_user_profile_tool, get_user_profile_fro
 from agents import Agent, ModelSettings, handoff
 from utils.context import UserContext, UserProfileOutput, RecordCommands, NavigationCommand
 from instructions import *
-from utils.context import ActionResult
 
 model="gpt-4o-mini"
-
-schema_agent = Agent[UserContext](
-    name="schema_agent",
-    model=model,
-    instructions=dynamic_schema_agent_instruction,
-    tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
-    model_settings=ModelSettings(temperature=0.5),
-    hooks=DebugAgentHooks("Schema Agent"),
-)
 
 record_action_agent = Agent[UserContext](
     name="record_action_agent",
@@ -26,13 +16,8 @@ record_action_agent = Agent[UserContext](
     tools=[create_record_tool, delete_record_tool, update_record_tool, retrieve_records_tool],
     model_settings=ModelSettings(parallel_tool_calls=True, temperature=0.8, tool_choice="retrieve_records_tool"),
     hooks=DebugAgentHooks("Record Action Agent"),
+    reset_tool_choice=True
 )
-
-record_action_agent.reset_tool_choice = True
-
-handoff_record_action = handoff(agent=record_action_agent)
-handoff_record_action.input_json_schema = RecordCommands.model_json_schema()
-
 
 schema_agent_in_single_task_handler = Agent[UserContext](
     name="schema_agent_in_single_task_handler",
@@ -46,20 +31,6 @@ schema_agent_in_single_task_handler = Agent[UserContext](
 
 async def extract_final_ouput(output):
     return output.final_output 
-
-
-record_agent = Agent[UserContext](
-    name="record_agent",
-    model=model,
-    instructions=dynamic_record_agent_instruction,
-    handoffs=[handoff_record_action],
-    output_type=RecordCommands,
-    tools=[retrieve_records_tool],
-    model_settings=ModelSettings(parallel_tool_calls=True, tool_choice="required", temperature=0.2),
-    hooks=DebugAgentHooks("Record Agent")
-)
-
-record_agent.reset_tool_choice = True
 
 single_task_handler = Agent[UserContext](
     name="single_task_handler",
@@ -92,10 +63,9 @@ task_coordinator = Agent[UserContext](
     instructions=dynamic_task_coordinator_instruction,
     tools=[single_task_handler_tool],
     model_settings=ModelSettings(temperature=0.5, parallel_tool_calls=False, tool_choice="required"),
+    reset_tool_choice = True,
     hooks=DebugAgentHooks("Task Coordinator Agent")
 )
-
-task_coordinator.reset_tool_choice = True
 
 user_profile_agent = Agent[UserContext](
     name="user_profile_agent",
