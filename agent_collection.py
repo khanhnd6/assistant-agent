@@ -24,8 +24,9 @@ schema_agent_in_single_task_handler = Agent[UserContext](
     model=model,
     instructions=dynamic_schema_agent_instruction,
     tools=[create_schema_tool, update_schema_tool, delete_schema_tool],
-    model_settings=ModelSettings(temperature=0.5),
+    model_settings=ModelSettings(temperature=0.3, tool_choice="required"),
     tool_use_behavior="stop_on_first_tool",
+    reset_tool_choice=True,
     hooks=DebugAgentHooks("schema_agent_in_single_task_handler")
 )
 
